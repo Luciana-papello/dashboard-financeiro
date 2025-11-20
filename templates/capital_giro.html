@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Capital de Giro - Dashboard Financeiro{% endblock %}
+
+{% block page_title %}Análise de Capital de Giro{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate-fade-in">
+    <!-- Seleção de Período -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-calendar-alt me-2"></i>Selecione o Período
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="mes" class="form-label">Mês</label>
+                            <select class="form-select" id="mes">
+                                <option value="">Selecione...</option>
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="ano" class="form-label">Ano</label>
+                            <select class="form-select" id="ano">
+                                <option value="">Selecione...</option>
+                                <option value="2023">2023</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" class="btn btn-primary w-100" onclick="carregarCapitalGiro()">
+                                <i class="fas fa-search me-2"></i>Visualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs Capital de Giro -->
+    <div class="row mb-4" id="kpisCapitalGiro" style="display: none;">
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">NCG</div>
+                <div class="kpi-value" id="ncg">-</div>
+                <small class="text-muted">Necessidade Capital de Giro</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">Sustentação</div>
+                <div class="kpi-value" id="sustentacao">-</div>
+                <small class="text-muted">Fontes de Financiamento</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">NCG Líquida</div>
+                <div class="kpi-value" id="ncgLiquida">-</div>
+                <small class="text-muted">NCG - Sustentação</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">Tesouraria</div>
+                <div class="kpi-value" id="tesouraria">-</div>
+                <small class="text-muted">NCG Líquida - Disponível</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Análise Detalhada COM DIAS -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Necessidade de Capital de Giro (NCG)</h5>
+                </div>
+                <div class="card-body">
+                    <div id="dadosNCG">
+                        <p class="text-center text-muted">Selecione um período para visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-hand-holding-usd me-2"></i>Sustentação (Fontes de Financiamento)</h5>
+                </div>
+                <div class="card-body">
+                    <div id="dadosSustentacao">
+                        <p class="text-center text-muted">Selecione um período para visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Resumo do Capital de Giro</h5>
+                </div>
+                <div class="card-body">
+                    <div id="dadosResumo">
+                        <p class="text-center text-muted">Selecione um período para visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function formatarMoeda(valor) {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(valor);
+    }
+
+    function getDiasDoMes(mes, ano) {
+        return new Date(ano, mes, 0).getDate();
+    }
+
+    function calcularDias(receita, diasMes, valorConta) {
+        if (!receita || receita === 0 || diasMes === 0) return 0;
+        const receitaDiaria = receita / diasMes;
+        return valorConta / receitaDiaria;
+    }
+
+    async function carregarCapitalGiro() {
+        const mes = document.getElementById('mes').value;
+        const ano = document.getElementById('ano').value;
+
+        if (!mes || !ano) {
+            alert('Selecione mês e ano!');
+            return;
+        }
+
+        try {
+            // Buscar contas Balanço (para detalhes)
+            const resContas = await fetch('/api/contas-balanco');
+            const contas = await resContas.json();
+
+            // Buscar valores
+            const resValores = await fetch(`/api/valores/${mes}/${ano}`);
+            const valores = await resValores.json();
+
+            // Renderizar análise
+            renderizarCapitalGiro(contas, valores, parseInt(mes), parseInt(ano));
+
+            // Exibir KPIs
+            exibirKPIsCapitalGiro(valores);
+
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao carregar dados!');
+        }
+    }
+
+    function renderizarCapitalGiro(contas, valores, mes, ano) {
+        const receita = valores[1] || 0; // Receita Operacional
+        const diasMes = getDiasDoMes(mes, ano);
+
+        // NECESSIDADES (Componentes da NCG)
+        const necessidades = [38, 39, 41, 42, 51, 43];
+        let htmlNCG = '<div class="table-responsive"><table class="table table-dark">';
+        htmlNCG += `
+            <thead>
+                <tr>
+                    <th>CONTA</th>
+                    <th class="text-end">VALOR DO MÊS</th>
+                    <th class="text-end">DIAS</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        necessidades.forEach(id => {
+            const conta = contas.find(c => c.id === id);
+            if (conta) {
+                const valor = valores[id] || 0;
+                const dias = calcularDias(receita, diasMes, valor);
+                
+                htmlNCG += `
+                    <tr>
+                        <td>${conta.nome}</td>
+                        <td class="text-end">${formatarMoeda(valor)}</td>
+                        <td class="text-end">${dias.toFixed(2)} dias</td>
+                    </tr>
+                `;
+            }
+        });
+        
+        const diasNCG = calcularDias(receita, diasMes, valores[88] || 0);
+        htmlNCG += `
+            <tr style="background-color: rgba(150, 202, 0, 0.1);">
+                <td><strong style="color: var(--color-green-primary);">TOTAL NCG</strong></td>
+                <td class="text-end"><strong style="color: var(--color-green-primary);">${formatarMoeda(valores[88] || 0)}</strong></td>
+                <td class="text-end"><strong style="color: var(--color-green-primary);">${diasNCG.toFixed(2)} dias</strong></td>
+            </tr>
+        `;
+        htmlNCG += '</tbody></table></div>';
+        
+        // FONTES (Componentes da Sustentação)
+        const fontes = [58, 59, 60, 61, 62, 64, 70];
+        let htmlSust = '<div class="table-responsive"><table class="table table-dark">';
+        htmlSust += `
+            <thead>
+                <tr>
+                    <th>CONTA</th>
+                    <th class="text-end">VALOR DO MÊS</th>
+                    <th class="text-end">DIAS</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        fontes.forEach(id => {
+            const conta = contas.find(c => c.id === id);
+            if (conta) {
+                const valor = valores[id] || 0;
+                const dias = calcularDias(receita, diasMes, valor);
+                
+                htmlSust += `
+                    <tr>
+                        <td>${conta.nome}</td>
+                        <td class="text-end">${formatarMoeda(valor)}</td>
+                        <td class="text-end">${dias.toFixed(2)} dias</td>
+                    </tr>
+                `;
+            }
+        });
+        
+        const diasSust = calcularDias(receita, diasMes, valores[89] || 0);
+        htmlSust += `
+            <tr style="background-color: rgba(150, 202, 0, 0.1);">
+                <td><strong style="color: var(--color-green-primary);">TOTAL SUSTENTAÇÃO</strong></td>
+                <td class="text-end"><strong style="color: var(--color-green-primary);">${formatarMoeda(valores[89] || 0)}</strong></td>
+                <td class="text-end"><strong style="color: var(--color-green-primary);">${diasSust.toFixed(2)} dias</strong></td>
+            </tr>
+        `;
+        htmlSust += '</tbody></table></div>';
+        
+        // RESUMO COM DIAS
+        const diasNCGLiquida = calcularDias(receita, diasMes, valores[90] || 0);
+        const diasDisponivel = calcularDias(receita, diasMes, valores[37] || 0);
+        const diasTesouraria = calcularDias(receita, diasMes, valores[91] || 0);
+        
+        let htmlResumo = '<div class="table-responsive"><table class="table table-dark table-lg">';
+        htmlResumo += `
+            <thead>
+                <tr>
+                    <th>DESCRIÇÃO</th>
+                    <th class="text-end">VALOR</th>
+                    <th class="text-end">DIAS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Necessidade de Capital de Giro (NCG)</strong></td>
+                    <td class="text-end"><strong>${formatarMoeda(valores[88] || 0)}</strong></td>
+                    <td class="text-end"><strong>${diasNCG.toFixed(2)} dias</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>(-) Sustentação</strong></td>
+                    <td class="text-end"><strong>${formatarMoeda(valores[89] || 0)}</strong></td>
+                    <td class="text-end"><strong>${diasSust.toFixed(2)} dias</strong></td>
+                </tr>
+                <tr style="background-color: rgba(150, 202, 0, 0.1);">
+                    <td><strong style="color: var(--color-green-primary);">NCG Líquida</strong></td>
+                    <td class="text-end"><strong style="color: var(--color-green-primary);">${formatarMoeda(valores[90] || 0)}</strong></td>
+                    <td class="text-end"><strong style="color: var(--color-green-primary);">${diasNCGLiquida.toFixed(2)} dias</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>(-) Disponível (Caixa + Bancos)</strong></td>
+                    <td class="text-end"><strong>${formatarMoeda(valores[37] || 0)}</strong></td>
+                    <td class="text-end"><strong>${diasDisponivel.toFixed(2)} dias</strong></td>
+                </tr>
+                <tr style="background-color: rgba(150, 202, 0, 0.15);">
+                    <td><strong style="color: var(--color-green-primary); font-size: 1.1rem;">TESOURARIA</strong></td>
+                    <td class="text-end"><strong style="color: var(--color-green-primary); font-size: 1.1rem;">${formatarMoeda(valores[91] || 0)}</strong></td>
+                    <td class="text-end"><strong style="color: var(--color-green-primary); font-size: 1.1rem;">${diasTesouraria.toFixed(2)} dias</strong></td>
+                </tr>
+            </tbody>
+        `;
+        htmlResumo += '</table></div>';
+        
+        // Análise da Situação
+        const tesouraria = valores[91] || 0;
+        let analise = '';
+        if (tesouraria > 0) {
+            analise = '<div class="alert alert-success mt-3"><i class="fas fa-check-circle me-2"></i><strong>Situação Favorável:</strong> A empresa possui NCG Líquida maior que o Disponível, indicando folga financeira.</div>';
+        } else {
+            analise = '<div class="alert alert-danger mt-3"><i class="fas fa-exclamation-triangle me-2"></i><strong>Atenção:</strong> A empresa está com déficit de tesouraria. O Disponível é menor que a NCG Líquida.</div>';
+        }
+        
+        htmlResumo += analise;
+        
+        document.getElementById('dadosNCG').innerHTML = htmlNCG;
+        document.getElementById('dadosSustentacao').innerHTML = htmlSust;
+        document.getElementById('dadosResumo').innerHTML = htmlResumo;
+    }
+
+    function exibirKPIsCapitalGiro(valores) {
+        document.getElementById('kpisCapitalGiro').style.display = 'flex';
+        
+        document.getElementById('ncg').textContent = formatarMoeda(valores[88] || 0);
+        document.getElementById('sustentacao').textContent = formatarMoeda(valores[89] || 0);
+        document.getElementById('ncgLiquida').textContent = formatarMoeda(valores[90] || 0);
+        document.getElementById('tesouraria').textContent = formatarMoeda(valores[91] || 0);
+    }
+</script>
+{% endblock %}

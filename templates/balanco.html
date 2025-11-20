@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Balanço Patrimonial - Dashboard Financeiro{% endblock %}
+
+{% block page_title %}Balanço Patrimonial{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate-fade-in">
+    <!-- Seleção de Período -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-calendar-alt me-2"></i>Selecione o Período
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="mes" class="form-label">Mês</label>
+                            <select class="form-select" id="mes">
+                                <option value="">Selecione...</option>
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="ano" class="form-label">Ano</label>
+                            <select class="form-select" id="ano">
+                                <option value="">Selecione...</option>
+                                <option value="2023">2023</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" class="btn btn-primary w-100" onclick="carregarBalanco()">
+                                <i class="fas fa-search me-2"></i>Visualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Indicadores de Liquidez -->
+    <div class="row mb-4" id="kpisLiquidez" style="display: none;">
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">Liquidez Corrente</div>
+                <div class="kpi-value" id="liquidezCorrente">-</div>
+                <small class="text-muted">Capacidade de pagamento</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">Liquidez Seca</div>
+                <div class="kpi-value" id="liquidezSeca">-</div>
+                <small class="text-muted">Sem estoques</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">Liquidez Imediata</div>
+                <div class="kpi-value" id="liquidezImediata">-</div>
+                <small class="text-muted">Disponível imediato</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">Capital Circulante</div>
+                <div class="kpi-value" id="capitalCirculante">-</div>
+                <small class="text-muted">Ativo - Passivo Circulante</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balanço Patrimonial -->
+    <div class="row">
+        <div class="col-md-6">
+            <!-- ATIVO -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>ATIVO</h5>
+                </div>
+                <div class="card-body">
+                    <div id="dadosAtivo">
+                        <p class="text-center text-muted">Selecione um período para visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <!-- PASSIVO -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-minus-circle me-2"></i>PASSIVO + PATRIMÔNIO LÍQUIDO</h5>
+                </div>
+                <div class="card-body">
+                    <div id="dadosPassivo">
+                        <p class="text-center text-muted">Selecione um período para visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function formatarMoeda(valor) {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(valor);
+    }
+
+    async function carregarBalanco() {
+        const mes = document.getElementById('mes').value;
+        const ano = document.getElementById('ano').value;
+
+        if (!mes || !ano) {
+            alert('Selecione mês e ano!');
+            return;
+        }
+
+        try {
+            // Buscar todas as contas
+            const resContas = await fetch('/api/contas-balanco');
+            const contas = await resContas.json();
+
+            // Buscar valores
+            const resValores = await fetch(`/api/valores/${mes}/${ano}`);
+            const valores = await resValores.json();
+
+            // Renderizar ATIVO
+            renderizarAtivo(contas, valores);
+
+            // Renderizar PASSIVO
+            renderizarPassivo(contas, valores);
+
+            // Exibir KPIs de Liquidez
+            exibirKPIs(valores);
+
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao carregar dados!');
+        }
+    }
+
+    function renderizarAtivo(contas, valores) {
+        const categorias = ['DISPONÍVEL', 'CRÉDITOS', 'ESTOQUES', 'ATIVO NÃO CIRCULANTE'];
+        let html = '';
+
+        categorias.forEach(categoria => {
+            const contasCategoria = contas.filter(c => c.categoria === categoria);
+            
+            if (contasCategoria.length > 0) {
+                html += `<div class="mb-4">`;
+                html += `<h6 class="text-uppercase fw-bold mb-3" style="color: var(--color-green-primary);">${categoria}</h6>`;
+                html += `<table class="table table-dark table-sm">`;
+
+                contasCategoria.forEach(conta => {
+                    const valor = valores[conta.id] || 0;
+                    const isTotal = conta.nome.includes('TOTAL');
+                    const classe = isTotal ? 'fw-bold' : '';
+                    const cor = isTotal ? 'style="color: var(--color-green-light);"' : '';
+
+                    html += `
+                        <tr>
+                            <td class="${classe}" ${cor}>${conta.nome}</td>
+                            <td class="text-end ${classe}" ${cor}>${formatarMoeda(valor)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `</table></div>`;
+            }
+        });
+
+        document.getElementById('dadosAtivo').innerHTML = html;
+    }
+
+    function renderizarPassivo(contas, valores) {
+        const categorias = ['PASSIVO CIRCULANTE', 'PASSIVO NÃO CIRCULANTE', 'LIQUIDEZ'];
+        let html = '';
+
+        categorias.forEach(categoria => {
+            const contasCategoria = contas.filter(c => c.categoria === categoria);
+            
+            if (contasCategoria.length > 0) {
+                html += `<div class="mb-4">`;
+                html += `<h6 class="text-uppercase fw-bold mb-3" style="color: var(--color-green-primary);">${categoria}</h6>`;
+                html += `<table class="table table-dark table-sm">`;
+
+                contasCategoria.forEach(conta => {
+                    const valor = valores[conta.id] || 0;
+                    const isTotal = conta.nome.includes('TOTAL');
+                    const classe = isTotal ? 'fw-bold' : '';
+                    const cor = isTotal ? 'style="color: var(--color-green-light);"' : '';
+
+                    html += `
+                        <tr>
+                            <td class="${classe}" ${cor}>${conta.nome}</td>
+                            <td class="text-end ${classe}" ${cor}>${formatarMoeda(valor)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `</table></div>`;
+            }
+        });
+
+        document.getElementById('dadosPassivo').innerHTML = html;
+    }
+
+    function exibirKPIs(valores) {
+        document.getElementById('kpisLiquidez').style.display = 'flex';
+        
+        document.getElementById('liquidezCorrente').textContent = (valores[84] || 0).toFixed(2);
+        document.getElementById('liquidezSeca').textContent = (valores[85] || 0).toFixed(2);
+        document.getElementById('liquidezImediata').textContent = (valores[86] || 0).toFixed(2);
+        document.getElementById('capitalCirculante').textContent = formatarMoeda(valores[87] || 0);
+    }
+</script>
+{% endblock %}

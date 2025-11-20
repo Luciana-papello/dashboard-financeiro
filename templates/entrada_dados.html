@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Entrada de Dados - Dashboard Financeiro{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate-fade-in">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 mb-3">
+                <i class="fas fa-keyboard text-success me-2"></i>
+                Entrada de Dados
+            </h1>
+            <p class="text-muted">Insira os valores financeiros do mês ou importe uma planilha Excel</p>
+        </div>
+    </div>
+
+    <!-- Seleção de Mês e Ano -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-calendar-alt me-2"></i>Selecione o Período
+                </div>
+                <div class="card-body">
+                    <form id="formPeriodo">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label for="mes" class="form-label">Mês</label>
+                                <select class="form-select" id="mes" name="mes" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="1">Janeiro</option>
+                                    <option value="2">Fevereiro</option>
+                                    <option value="3">Março</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Maio</option>
+                                    <option value="6">Junho</option>
+                                    <option value="7">Julho</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Setembro</option>
+                                    <option value="10">Outubro</option>
+                                    <option value="11">Novembro</option>
+                                    <option value="12">Dezembro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="ano" class="form-label">Ano</label>
+                                <select class="form-select" id="ano" name="ano" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="2023">2023</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-primary w-100" onclick="carregarDados()">
+                                    <i class="fas fa-search me-2"></i>Carregar Dados
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-secondary w-100" onclick="limparFormulario()">
+                                    <i class="fas fa-eraser me-2"></i>Limpar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs para Balanço, DRE, etc -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="balanco-tab" data-bs-toggle="tab" data-bs-target="#balanco" type="button">
+                                <i class="fas fa-balance-scale me-2"></i>Balanço Patrimonial
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="dre-tab" data-bs-toggle="tab" data-bs-target="#dre" type="button">
+                                <i class="fas fa-file-invoice-dollar me-2"></i>DRE
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="myTabContent">
+                        <!-- TAB BALANÇO PATRIMONIAL -->
+                        <div class="tab-pane fade show active" id="balanco" role="tabpanel">
+                            <form id="formBalanco">
+                                <div id="contasBalanco">
+                                    <p class="text-center text-muted">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Selecione um mês e ano acima para carregar o formulário
+                                    </p>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- TAB DRE -->
+                        <div class="tab-pane fade" id="dre" role="tabpanel">
+                            <form id="formDRE">
+                                <div id="contasDRE">
+                                    <p class="text-center text-muted">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Selecione um mês e ano acima para carregar o formulário
+                                    </p>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-end">
+                    <button type="button" class="btn btn-success btn-lg" onclick="salvarDados()">
+                        <i class="fas fa-save me-2"></i>Salvar Dados
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Opção de Importação Excel -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-file-excel me-2"></i>Importar Planilha Excel
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <input type="file" class="form-control" id="fileExcel" accept=".xlsx,.xls">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Formato aceito: .xlsx ou .xls (estrutura compatível com DadosFinanceiroOTM.xlsx)
+                            </small>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-primary w-100" onclick="importarExcel()">
+                                <i class="fas fa-upload me-2"></i>Importar Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let mesSelecionado = null;
+    let anoSelecionado = null;
+
+    // Função para carregar as contas do banco
+    async function carregarDados() {
+        const mes = document.getElementById('mes').value;
+        const ano = document.getElementById('ano').value;
+
+        if (!mes || !ano) {
+            alert('Por favor, selecione o mês e o ano!');
+            return;
+        }
+
+        mesSelecionado = mes;
+        anoSelecionado = ano;
+
+        try {
+            // Buscar contas de entrada manual
+            const response = await fetch(`/api/contas-entrada-manual`);
+            const contas = await response.json();
+
+            // Buscar valores já existentes para este mês/ano
+            const valoresResponse = await fetch(`/api/valores/${mes}/${ano}`);
+            const valores = await valoresResponse.json();
+
+            // Separar por tipo
+            const contasBalanco = contas.filter(c => c.tipo === 'Balanço');
+            const contasDRE = contas.filter(c => c.tipo === 'DRE');
+
+            // Renderizar formulários
+            renderizarFormulario('contasBalanco', contasBalanco, valores);
+            renderizarFormulario('contasDRE', contasDRE, valores);
+
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+            alert('Erro ao carregar dados. Verifique o console.');
+        }
+    }
+
+    // Função para renderizar o formulário
+    function renderizarFormulario(elementId, contas, valores) {
+        const container = document.getElementById(elementId);
+        
+        if (contas.length === 0) {
+            container.innerHTML = '<p class="text-center text-muted">Nenhuma conta encontrada</p>';
+            return;
+        }
+
+        let html = '<div class="row">';
+        
+        // Agrupar por categoria
+        const categorias = [...new Set(contas.map(c => c.categoria || 'Outros'))];
+        
+        categorias.forEach(categoria => {
+            const contasCategoria = contas.filter(c => (c.categoria || 'Outros') === categoria);
+            
+            html += `
+                <div class="col-md-12 mb-4">
+                    <h5 class="border-bottom pb-2 mb-3" style="color: var(--color-green-primary);">
+                        ${categoria}
+                    </h5>
+                    <div class="row">
+            `;
+            
+            contasCategoria.forEach(conta => {
+                const valor = valores[conta.id] || 0;
+                
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">
+                            <strong>ID ${conta.id}</strong> - ${conta.nome}
+                        </label>
+                        <input 
+                            type="number" 
+                            class="form-control" 
+                            id="conta_${conta.id}" 
+                            value="${valor}"
+                            step="0.01"
+                            placeholder="R$ 0,00"
+                        >
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    // Função para salvar dados
+    async function salvarDados() {
+        if (!mesSelecionado || !anoSelecionado) {
+            alert('Selecione o mês e ano primeiro!');
+            return;
+        }
+
+        const dados = {
+            mes: mesSelecionado,
+            ano: anoSelecionado,
+            valores: {}
+        };
+
+        // Coletar todos os valores dos inputs
+        const inputs = document.querySelectorAll('input[id^="conta_"]');
+        inputs.forEach(input => {
+            const contaId = input.id.replace('conta_', '');
+            const valor = parseFloat(input.value) || 0;
+            dados.valores[contaId] = valor;
+        });
+
+        try {
+            const response = await fetch('/api/salvar-dados', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dados)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('✅ Dados salvos com sucesso!');
+                // Recarregar para mostrar valores calculados
+                carregarDados();
+            } else {
+                alert('❌ Erro ao salvar: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('❌ Erro ao salvar dados. Verifique o console.');
+        }
+    }
+
+    // Função para limpar formulário
+    function limparFormulario() {
+        document.getElementById('mes').value = '';
+        document.getElementById('ano').value = '';
+        document.getElementById('contasBalanco').innerHTML = '<p class="text-center text-muted"><i class="fas fa-info-circle me-2"></i>Selecione um mês e ano acima para carregar o formulário</p>';
+        document.getElementById('contasDRE').innerHTML = '<p class="text-center text-muted"><i class="fas fa-info-circle me-2"></i>Selecione um mês e ano acima para carregar o formulário</p>';
+        mesSelecionado = null;
+        anoSelecionado = null;
+    }
+
+    // Função para importar Excel (será implementada depois)
+    function importarExcel() {
+        alert('🚧 Funcionalidade de importação Excel será implementada em breve!');
+    }
+</script>
+{% endblock %}

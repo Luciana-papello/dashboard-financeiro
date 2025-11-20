@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard Financeiro - OTM{% endblock %}</title>
+    
+    <!-- Google Fonts - Montserrat -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="sidebar-logo">
+                <h5 class="sidebar-title">Dashboard<br>Financeiro</h5>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="sidebar-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <a href="{{ url_for('dashboard') }}" class="sidebar-link">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'entrada_dados' %}active{% endif %}">
+                    <a href="{{ url_for('entrada_dados') }}" class="sidebar-link">
+                        <i class="fas fa-keyboard"></i>
+                        <span>Entrada de Dados</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'balanco' %}active{% endif %}">
+                    <a href="{{ url_for('balanco') }}" class="sidebar-link">
+                        <i class="fas fa-balance-scale"></i>
+                        <span>Balanço</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'dre' %}active{% endif %}">
+                    <a href="{{ url_for('dre') }}" class="sidebar-link">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <span>DRE</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'capital_giro' %}active{% endif %}">
+                    <a href="{{ url_for('capital_giro') }}" class="sidebar-link">
+                        <i class="fas fa-coins"></i>
+                        <span>Capital de Giro</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <button class="btn-toggle-sidebar" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="topbar">
+                <button class="btn-toggle-mobile" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="topbar-title">
+                    {% block page_title %}Dashboard Financeiro{% endblock %}
+                </div>
+                <div class="topbar-actions">
+                    <span class="text-muted">
+                        <i class="far fa-calendar-alt me-2"></i>
+                        <span id="displayData"></span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Mensagens Flash -->
+            <div class="content-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Conteúdo Principal -->
+                {% block content %}{% endblock %}
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-content">
+                    <span>© 2024 OTM - Dashboard Financeiro</span>
+                    <span class="text-muted ms-3">Desenvolvido com Python & Flask</span>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    
+    <script>
+        // Exibir data atual
+        const hoje = new Date();
+        const opcoes = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        };
+        document.getElementById('displayData').textContent = 
+            hoje.toLocaleDateString('pt-BR', opcoes);
+        
+        // Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            
+            // Mobile
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('active');
+            }
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
