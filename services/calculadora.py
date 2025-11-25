@@ -58,33 +58,51 @@ class Calculadora:
         if not formula:
             return 0.0
         
-        # Substituir os IDs pelos valores
-        formula_calculavel = formula
-        
-        # Encontrar todos os números (IDs) na fórmula
-        ids_na_formula = re.findall(r'\d+', formula)
-        
-        for id_str in ids_na_formula:
-            conta_id = int(id_str)
-            valor = self._obter_valor(conta_id)
-            
-            # Substituir o ID pelo valor na fórmula
-            # Usar regex para substituir apenas números completos (não partes de outros números)
-            formula_calculavel = re.sub(
-                r'\b' + id_str + r'\b', 
-                str(valor), 
-                formula_calculavel
-            )
-        
-        # Avaliar a expressão matemática
         try:
+            # Abordagem: split por operadores, substituir tokens inteiros, rejuntar
+            import re
+            
+            # Preservar a fórmula original
+            formula_original = str(formula)
+            
+            # Dividir a fórmula em tokens (números e operadores)
+            # Match: números (inteiros ou decimais) ou operadores
+            tokens = re.findall(r'\d+\.?\d*|\+|\-|\*|\/|\(|\)', formula_original)
+            
+            # Criar dicionário de substituições
+            substituicoes = {}
+            for token in tokens:
+                # Se o token é um número inteiro (sem ponto decimal)
+                if token.isdigit():
+                    conta_id = int(token)
+                    # Buscar valor da conta
+                    valor = self._obter_valor(conta_id)
+                    substituicoes[token] = str(valor)
+            
+            # Reconstruir fórmula substituindo apenas tokens completos
+            nova_formula = []
+            for token in tokens:
+                if token in substituicoes:
+                    nova_formula.append(substituicoes[token])
+                else:
+                    nova_formula.append(token)
+            
+            # Juntar com espaços para clareza
+            formula_calculavel = ' '.join(nova_formula)
+            
+            # Avaliar
             resultado = eval(formula_calculavel)
             return float(resultado) if resultado else 0.0
+            
         except ZeroDivisionError:
             print(f"⚠️ Divisão por zero na fórmula: {formula}")
             return 0.0
+        except SyntaxError as e:
+            print(f"⚠️ Erro de sintaxe na fórmula '{formula}'")
+            print(f"   DEBUG: {formula_calculavel}")
+            return 0.0
         except Exception as e:
-            print(f"⚠️ Erro ao calcular fórmula '{formula}': {str(e)}")
+            print(f"⚠️ Erro ao calcular fórmula '{formula}': {type(e).__name__}: {str(e)}")
             return 0.0
     
     def _calcular_acumulado(self, conta_id):

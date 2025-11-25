@@ -40,6 +40,11 @@ def dre():
     """Tela de DRE"""
     return render_template('dre.html')
 
+@app.route('/ebitda')
+def ebitda():
+    """Tela de Análise EBITDA"""
+    return render_template('ebitda.html')
+
 @app.route('/capital-giro')
 def capital_giro():
     """Tela de Capital de Giro"""
@@ -300,6 +305,323 @@ def api_contas_dre():
     contas = Conta.query.filter_by(tipo='DRE').order_by(Conta.id).all()
     return jsonify([conta.to_dict() for conta in contas])
 
+
+# ============================================
+# ROTA DE IMPORTAÇÃO DE EXCEL
+# ============================================
+
+@app.route('/api/upload-excel', methods=['POST'])
+def api_upload_excel():
+    """Recebe upload de arquivo Excel e importa os dados"""
+    try:
+        # Verificar se arquivo foi enviado
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
+        
+        file = request.files['file']
+        
+        # Verificar se arquivo tem nome
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado'}), 400
+        
+        # Verificar extensão
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            return jsonify({'success': False, 'message': 'Arquivo deve ser .xlsx ou .xls'}), 400
+        
+        # Salvar arquivo temporariamente
+        import os
+        upload_folder = os.path.join(app.root_path, 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        # Gerar nome único para evitar conflitos
+        import uuid
+        nome_unico = f"{uuid.uuid4().hex}_{file.filename}"
+        filepath = os.path.join(upload_folder, nome_unico)
+        file.save(filepath)
+        
+        # Importar dados
+        from services.importador import importar_excel
+        resultado = importar_excel(filepath)
+        
+        # Deletar arquivo temporário (tentar até 3 vezes)
+        import time
+        for tentativa in range(3):
+            try:
+                os.remove(filepath)
+                break
+            except PermissionError:
+                if tentativa < 2:
+                    time.sleep(0.5)  # Aguardar 0.5 segundos
+                else:
+                    print(f"⚠️ Não foi possível deletar {filepath} - arquivo em uso")
+        
+        if resultado['sucesso']:
+            # Executar cálculos para todos os meses importados
+            # (Isso pode demorar dependendo da quantidade de dados)
+            return jsonify({
+                'success': True,
+                'message': f"Importação concluída! {resultado['total_importado']} valores importados.",
+                'detalhes': resultado
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': resultado.get('erro', 'Erro desconhecido')
+            }), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/gerar-template-excel')
+def api_gerar_template_excel():
+    """Gera um template Excel para download"""
+    try:
+        import pandas as pd
+        from io import BytesIO
+        from flask import send_file
+        
+        # Buscar contas de entrada manual
+        contas_balanco = Conta.query.filter_by(tipo='Balanço', entrada_manual=True).order_by(Conta.id).all()
+        contas_dre = Conta.query.filter_by(tipo='DRE', entrada_manual=True).order_by(Conta.id).all()
+        
+        # Criar estrutura do template
+        meses = ['JAN/2024', 'FEV/2024', 'MAR/2024', 'ABR/2024', 'MAI/2024', 'JUN/2024',
+                 'JUL/2024', 'AGO/2024', 'SET/2024', 'OUT/2024', 'NOV/2024', 'DEZ/2024']
+        
+        # DataFrame Balanço
+        df_balanco = pd.DataFrame({
+            'ID': [c.id for c in contas_balanco],
+            'CONTA': [c.nome for c in contas_balanco],
+            **{mes: [0.0] * len(contas_balanco) for mes in meses}
+        })
+        
+        # DataFrame DRE
+        df_dre = pd.DataFrame({
+            'ID': [c.id for c in contas_dre],
+            'CONTA': [c.nome for c in contas_dre],
+            **{mes: [0.0] * len(contas_dre) for mes in meses}
+        })
+        
+        # Criar arquivo Excel
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_balanco.to_excel(writer, sheet_name='BALANCO_PATRIMONIAL', index=False)
+            df_dre.to_excel(writer, sheet_name='DRE', index=False)
+        
+        output.seek(0)
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='Template_Importacao_OTM.xlsx'
+        )
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# ============================================
+# ROTAS DA API PARA DASHBOARD/GRÁFICOS
+# ============================================
+
+@app.route('/api/dashboard/kpis/<int:mes>/<int:ano>')
+def api_dashboard_kpis(mes, ano):
+    """Retorna os KPIs principais do mês"""
+    try:
+        valores_db = ValorMensal.query.filter_by(mes=mes, ano=ano).all()
+        valores = {v.conta_id: v.valor for v in valores_db}
+        
+        kpis = {
+            'receita': valores.get(1, 0),
+            'resultado_operacional': valores.get(18, 0),
+            'ebitda': valores.get(21, 0),
+            'margem_contribuicao': valores.get(16, 0),
+            'liquidez_corrente': valores.get(84, 0),
+            'capital_circulante': valores.get(87, 0),
+        }
+        
+        return jsonify(kpis)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dashboard/evolucao/<int:ano>')
+def api_dashboard_evolucao(ano):
+    """Retorna dados de evolução mensal para gráficos de linha"""
+    try:
+        # Buscar dados dos últimos 12 meses
+        dados = {
+            'meses': [],
+            'receita': [],
+            'ebitda': [],
+            'resultado_operacional': [],
+            'margem_contribuicao': [],
+            'fluxo_caixa_livre': []
+        }
+        
+        for mes in range(1, 13):
+            valores_db = ValorMensal.query.filter_by(mes=mes, ano=ano).all()
+            valores = {v.conta_id: v.valor for v in valores_db}
+            
+            # Se não tem dados neste mês, pular
+            if not valores:
+                continue
+            
+            dados['meses'].append(f"{mes:02d}/{ano}")
+            dados['receita'].append(valores.get(1, 0))
+            dados['ebitda'].append(valores.get(21, 0))
+            dados['resultado_operacional'].append(valores.get(18, 0))
+            dados['margem_contribuicao'].append(valores.get(16, 0))
+            dados['fluxo_caixa_livre'].append(valores.get(28, 0))
+        
+        return jsonify(dados)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dashboard/composicao/<int:mes>/<int:ano>')
+def api_dashboard_composicao(mes, ano):
+    """Retorna dados de composição para gráficos de pizza"""
+    try:
+        valores_db = ValorMensal.query.filter_by(mes=mes, ano=ano).all()
+        valores = {v.conta_id: v.valor for v in valores_db}
+        
+        composicao = {
+            'ativo': {
+                'labels': ['Disponível', 'Créditos', 'Estoques'],
+                'valores': [
+                    valores.get(37, 0),
+                    valores.get(45, 0),
+                    valores.get(51, 0)
+                ]
+            },
+            'passivo': {
+                'labels': ['Passivo Circulante', 'Passivo Não Circulante', 'Patrimônio Líquido'],
+                'valores': [
+                    valores.get(71, 0),
+                    valores.get(81, 0),
+                    valores.get(82, 0)
+                ]
+            }
+        }
+        
+        return jsonify(composicao)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dashboard/ultimos-meses')
+def api_dashboard_ultimos_meses():
+    """Retorna lista dos últimos meses com dados disponíveis"""
+    try:
+        meses_disponiveis = db.session.query(
+            ValorMensal.mes,
+            ValorMensal.ano
+        ).distinct().order_by(ValorMensal.ano.desc(), ValorMensal.mes.desc()).limit(12).all()
+        
+        resultado = [{'mes': m, 'ano': a} for m, a in meses_disponiveis]
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+
+# ============================================
+# ROTAS PARA NOTAS FISCAIS
+# ============================================
+
+@app.route('/api/upload-nfe', methods=['POST'])
+def api_upload_nfe():
+    """Recebe upload de planilha de Notas Fiscais"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado'}), 400
+        
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            return jsonify({'success': False, 'message': 'Arquivo deve ser .xlsx ou .xls'}), 400
+        
+        # Salvar arquivo temporariamente
+        import os
+        import uuid
+        import time
+        
+        upload_folder = os.path.join(app.root_path, 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        nome_unico = f"{uuid.uuid4().hex}_{file.filename}"
+        filepath = os.path.join(upload_folder, nome_unico)
+        file.save(filepath)
+        
+        # Importar NF-e
+        from services.importador_nfe import importar_nfe
+        resultado = importar_nfe(filepath)
+        
+        # Tentar deletar arquivo
+        for tentativa in range(3):
+            try:
+                os.remove(filepath)
+                break
+            except PermissionError:
+                if tentativa < 2:
+                    time.sleep(0.5)
+        
+        if resultado['sucesso']:
+            # Recalcular contas 93 e 94 para os meses importados
+            from services.calculadora import calcular_mes
+            from models.nota_fiscal import NotaFiscal
+            
+            meses_anos = db.session.query(
+                NotaFiscal.mes,
+                NotaFiscal.ano
+            ).distinct().all()
+            
+            for mes, ano in meses_anos:
+                calcular_mes(mes, ano)
+            
+            return jsonify({
+                'success': True,
+                'message': f"Importação concluída! {resultado['total_importado']} notas fiscais importadas.",
+                'detalhes': resultado
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': resultado.get('erro', 'Erro desconhecido')
+            }), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/nfe/resumo/<int:mes>/<int:ano>')
+def api_nfe_resumo(mes, ano):
+    """Retorna resumo das NF-e de um mês"""
+    try:
+        from models.nota_fiscal import NotaFiscal
+        
+        total = db.session.query(
+            db.func.sum(NotaFiscal.valor_nfe)
+        ).filter_by(
+            tipo_nfe='Entrada',
+            mes=mes,
+            ano=ano
+        ).scalar() or 0.0
+        
+        quantidade = NotaFiscal.query.filter_by(
+            tipo_nfe='Entrada',
+            mes=mes,
+            ano=ano
+        ).count()
+        
+        return jsonify({
+            'total': total,
+            'quantidade': quantidade,
+            'mes': mes,
+            'ano': ano
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500        
+
 if __name__ == '__main__':
     with app.app_context():
         # Criar todas as tabelas
@@ -315,3 +637,4 @@ if __name__ == '__main__':
         print("🛑 Para parar: Ctrl + C\n")
     
     app.run(debug=True)
+

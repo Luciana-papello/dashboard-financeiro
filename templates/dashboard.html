@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Principal - Dashboard Financeiro{% endblock %}
+
+{% block page_title %}Dashboard Financeiro{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate-fade-in">
+    
+    <!-- Seleção de Período -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-calendar-alt me-2"></i>Selecione o Período
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="mes" class="form-label">Mês</label>
+                            <select class="form-select" id="mes">
+                                <option value="">Selecione...</option>
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="ano" class="form-label">Ano</label>
+                            <select class="form-select" id="ano">
+                                <option value="">Selecione...</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" class="btn btn-primary w-100" onclick="carregarDashboard()">
+                                <i class="fas fa-chart-line me-2"></i>Carregar Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs Principais -->
+    <div class="row mb-4" id="kpisPrincipais" style="display: none;">
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">Receita Operacional</div>
+                <div class="kpi-value" id="kpiReceita">-</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">EBITDA</div>
+                <div class="kpi-value" id="kpiEbitda">-</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">Resultado Operacional</div>
+                <div class="kpi-value" id="kpiResultado">-</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="kpi-label">Liquidez Corrente</div>
+                <div class="kpi-value" id="kpiLiquidez">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos de Evolução -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Evolução da Receita e EBITDA</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoEvolucaoReceita" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Evolução do Resultado e Margem</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoEvolucaoResultado" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos de Composição -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Composição do Ativo Circulante</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoComposicaoAtivo" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Composição do Passivo</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoComposicaoPassivo" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fluxo de Caixa Livre -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Evolução do Fluxo de Caixa Livre</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoFluxoCaixa" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.kpi-card {
+    text-align: center;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(150, 202, 0, 0.3);
+}
+
+.kpi-label {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.kpi-value {
+    font-size: 1.8rem;
+    color: var(--color-green-primary);
+    font-weight: 700;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let mesSelecionado = null;
+let anoSelecionado = null;
+let graficos = {};
+
+function formatarMoeda(valor) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(valor);
+}
+
+async function carregarDashboard() {
+    const mes = document.getElementById('mes').value;
+    const ano = document.getElementById('ano').value;
+
+    if (!mes || !ano) {
+        alert('Selecione mês e ano!');
+        return;
+    }
+
+    mesSelecionado = mes;
+    anoSelecionado = ano;
+
+    try {
+        // Carregar KPIs
+        await carregarKPIs(mes, ano);
+
+        // Carregar gráficos de evolução
+        await carregarGraficosEvolucao(ano);
+
+        // Carregar gráficos de composição
+        await carregarGraficosComposicao(mes, ano);
+
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao carregar dashboard!');
+    }
+}
+
+async function carregarKPIs(mes, ano) {
+    const response = await fetch(`/api/dashboard/kpis/${mes}/${ano}`);
+    const kpis = await response.json();
+
+    document.getElementById('kpiReceita').textContent = formatarMoeda(kpis.receita);
+    document.getElementById('kpiEbitda').textContent = formatarMoeda(kpis.ebitda);
+    document.getElementById('kpiResultado').textContent = formatarMoeda(kpis.resultado_operacional);
+    document.getElementById('kpiLiquidez').textContent = kpis.liquidez_corrente.toFixed(2);
+
+    document.getElementById('kpisPrincipais').style.display = 'flex';
+}
+
+async function carregarGraficosEvolucao(ano) {
+    const response = await fetch(`/api/dashboard/evolucao/${ano}`);
+    const dados = await response.json();
+
+    // Destruir gráficos anteriores se existirem
+    if (graficos.evolucaoReceita) graficos.evolucaoReceita.destroy();
+    if (graficos.evolucaoResultado) graficos.evolucaoResultado.destroy();
+    if (graficos.fluxoCaixa) graficos.fluxoCaixa.destroy();
+
+    // Gráfico de Receita e EBITDA
+    const ctxReceita = document.getElementById('graficoEvolucaoReceita').getContext('2d');
+    graficos.evolucaoReceita = new Chart(ctxReceita, {
+        type: 'line',
+        data: {
+            labels: dados.meses,
+            datasets: [
+                {
+                    label: 'Receita',
+                    data: dados.receita,
+                    borderColor: '#96CA00',
+                    backgroundColor: 'rgba(150, 202, 0, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'EBITDA',
+                    data: dados.ebitda,
+                    borderColor: '#C5DF56',
+                    backgroundColor: 'rgba(197, 223, 86, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#e0e0e0' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#9e9e9e',
+                        callback: function(value) {
+                            return 'R$ ' + (value / 1000).toFixed(0) + 'k';
+                        }
+                    },
+                    grid: { color: '#2a2a2a' }
+                },
+                x: {
+                    ticks: { color: '#9e9e9e' },
+                    grid: { color: '#2a2a2a' }
+                }
+            }
+        }
+    });
+
+    // Gráfico de Resultado e Margem
+    const ctxResultado = document.getElementById('graficoEvolucaoResultado').getContext('2d');
+    graficos.evolucaoResultado = new Chart(ctxResultado, {
+        type: 'line',
+        data: {
+            labels: dados.meses,
+            datasets: [
+                {
+                    label: 'Resultado Operacional',
+                    data: dados.resultado_operacional,
+                    borderColor: '#96CA00',
+                    backgroundColor: 'rgba(150, 202, 0, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Margem de Contribuição',
+                    data: dados.margem_contribuicao,
+                    borderColor: '#84A802',
+                    backgroundColor: 'rgba(132, 168, 2, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#e0e0e0' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        color: '#9e9e9e',
+                        callback: function(value) {
+                            return 'R$ ' + (value / 1000).toFixed(0) + 'k';
+                        }
+                    },
+                    grid: { color: '#2a2a2a' }
+                },
+                x: {
+                    ticks: { color: '#9e9e9e' },
+                    grid: { color: '#2a2a2a' }
+                }
+            }
+        }
+    });
+
+    // Gráfico de Fluxo de Caixa Livre
+    const ctxFluxo = document.getElementById('graficoFluxoCaixa').getContext('2d');
+    graficos.fluxoCaixa = new Chart(ctxFluxo, {
+        type: 'bar',
+        data: {
+            labels: dados.meses,
+            datasets: [{
+                label: 'Fluxo de Caixa Livre (Acumulado)',
+                data: dados.fluxo_caixa_livre,
+                backgroundColor: dados.fluxo_caixa_livre.map(v => v >= 0 ? '#96CA00' : '#ff4444'),
+                borderColor: dados.fluxo_caixa_livre.map(v => v >= 0 ? '#84A802' : '#cc0000'),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#e0e0e0' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#9e9e9e',
+                        callback: function(value) {
+                            return 'R$ ' + (value / 1000).toFixed(0) + 'k';
+                        }
+                    },
+                    grid: { color: '#2a2a2a' }
+                },
+                x: {
+                    ticks: { color: '#9e9e9e' },
+                    grid: { color: '#2a2a2a' }
+                }
+            }
+        }
+    });
+}
+
+async function carregarGraficosComposicao(mes, ano) {
+    const response = await fetch(`/api/dashboard/composicao/${mes}/${ano}`);
+    const dados = await response.json();
+
+    // Destruir gráficos anteriores
+    if (graficos.composicaoAtivo) graficos.composicaoAtivo.destroy();
+    if (graficos.composicaoPassivo) graficos.composicaoPassivo.destroy();
+
+    // Gráfico de Composição do Ativo
+    const ctxAtivo = document.getElementById('graficoComposicaoAtivo').getContext('2d');
+    graficos.composicaoAtivo = new Chart(ctxAtivo, {
+        type: 'doughnut',
+        data: {
+            labels: dados.ativo.labels,
+            datasets: [{
+                data: dados.ativo.valores,
+                backgroundColor: ['#96CA00', '#C5DF56', '#84A802'],
+                borderColor: '#151515',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#e0e0e0', padding: 15 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + formatarMoeda(context.parsed);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Gráfico de Composição do Passivo
+    const ctxPassivo = document.getElementById('graficoComposicaoPassivo').getContext('2d');
+    graficos.composicaoPassivo = new Chart(ctxPassivo, {
+        type: 'doughnut',
+        data: {
+            labels: dados.passivo.labels,
+            datasets: [{
+                data: dados.passivo.valores,
+                backgroundColor: ['#ff6b6b', '#ffa500', '#96CA00'],
+                borderColor: '#151515',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#e0e0e0', padding: 15 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + formatarMoeda(context.parsed);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Carregar dashboard automaticamente com o mês mais recente
+window.addEventListener('load', async function() {
+    try {
+        const response = await fetch('/api/dashboard/ultimos-meses');
+        const meses = await response.json();
+        
+        if (meses.length > 0) {
+            const mesRecente = meses[0];
+            document.getElementById('mes').value = mesRecente.mes;
+            document.getElementById('ano').value = mesRecente.ano;
+            carregarDashboard();
+        }
+    } catch (error) {
+        console.log('Aguardando seleção manual de período');
+    }
+});
+</script>
+{% endblock %}

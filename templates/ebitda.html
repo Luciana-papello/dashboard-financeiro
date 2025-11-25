@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}Análise EBITDA - Dashboard Financeiro{% endblock %}
+
+{% block page_title %}Análise EBITDA{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate-fade-in">
+    
+    <!-- Seleção de Período -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-calendar-alt me-2"></i>Selecione o Período
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="mes" class="form-label">Mês</label>
+                            <select class="form-select" id="mes">
+                                <option value="">Selecione...</option>
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="ano" class="form-label">Ano</label>
+                            <select class="form-select" id="ano">
+                                <option value="">Selecione...</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" class="btn btn-primary w-100" onclick="carregarEbitda()">
+                                <i class="fas fa-search me-2"></i>Visualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Importação de Notas Fiscais -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-file-invoice me-2"></i>Importar Notas Fiscais (Compras)
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Importante:</strong> Envie a planilha de NF-e com as colunas: Tipo da NF-e, Data de Emissão, Valor da NF-e. Apenas NF-e de "Entrada" serão importadas.
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <input type="file" class="form-control" id="fileNFe" accept=".xlsx,.xls">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-success w-100" onclick="importarNFe()">
+                                <i class="fas fa-upload me-2"></i>Importar NF-e
+                            </button>
+                        </div>
+                    </div>
+                    <div id="progressoNFe" style="display: none;" class="mt-3">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
+                                Importando...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 1: Análise EBITDA -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Análise EBITDA</h5>
+                </div>
+                <div class="card-body">
+                    <div id="secaoEbitda">
+                        <p class="text-center text-muted">Selecione um período para visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 2: Composição do Ativo Circulante -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-wallet me-2"></i>Composição do Ativo Circulante</h5>
+                </div>
+                <div class="card-body">
+                    <div id="secaoAtivo">
+                        <p class="text-center text-muted">Selecione um período para visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 3: Capital Circulante -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-coins me-2"></i>Capital Circulante</h5>
+                </div>
+                <div class="card-body">
+                    <div id="secaoCapital">
+                        <p class="text-center text-muted">Selecione um período para visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 4: Índices e Prazos Médios -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Índices e Prazos Médios</h5>
+                </div>
+                <div class="card-body">
+                    <div id="secaoIndices">
+                        <p class="text-center text-muted">Selecione um período para visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function formatarMoeda(valor) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(valor);
+}
+
+function formatarPercentual(valor, base) {
+    if (!base || base === 0) return '0.00%';
+    const perc = (valor / base) * 100;
+    return perc.toFixed(2) + '%';
+}
+
+async function carregarEbitda() {
+    const mes = document.getElementById('mes').value;
+    const ano = document.getElementById('ano').value;
+
+    if (!mes || !ano) {
+        alert('Selecione mês e ano!');
+        return;
+    }
+
+    try {
+        // Buscar valores
+        const resValores = await fetch(`/api/valores/${mes}/${ano}`);
+        const valores = await resValores.json();
+
+        // Buscar resumo de NF-e
+        const resNFe = await fetch(`/api/nfe/resumo/${mes}/${ano}`);
+        const nfeResumo = await resNFe.json();
+
+        // Renderizar seções
+        renderizarSecaoEbitda(valores);
+        renderizarSecaoAtivo(valores);
+        renderizarSecaoCapital(valores);
+        renderizarSecaoIndices(valores, nfeResumo);
+
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao carregar dados!');
+    }
+}
+
+function renderizarSecaoEbitda(valores) {
+    const receita = valores[1] || 0;
+    
+    let html = '<table class="table table-dark">';
+    html += '<thead><tr><th>CONTA</th><th class="text-end">VALOR</th><th class="text-end">%</th></tr></thead>';
+    html += '<tbody>';
+    
+    const contas = [
+        { id: 18, nome: 'Resultado Operacional' },
+        { id: 19, nome: 'Despesas Financeiras' },
+        { id: 20, nome: 'Depreciações' },
+        { id: 21, nome: 'EBITDA' }
+    ];
+    
+    contas.forEach(conta => {
+        const valor = valores[conta.id] || 0;
+        const percentual = formatarPercentual(valor, receita);
+        const isEbitda = conta.id === 21;
+        
+        html += `
+            <tr ${isEbitda ? 'style="background-color: rgba(150, 202, 0, 0.1);"' : ''}>
+                <td ${isEbitda ? 'class="fw-bold" style="color: var(--color-green-primary);"' : ''}>${conta.nome}</td>
+                <td class="text-end ${isEbitda ? 'fw-bold' : ''}">${formatarMoeda(valor)}</td>
+                <td class="text-end ${isEbitda ? 'fw-bold' : ''}">${percentual}</td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table>';
+    document.getElementById('secaoEbitda').innerHTML = html;
+}
+
+function renderizarSecaoAtivo(valores) {
+    const ativoCirculante = valores[52] || 0;
+    
+    let html = '<table class="table table-dark">';
+    html += '<thead><tr><th>CONTA</th><th class="text-end">VALOR</th><th class="text-end">%</th></tr></thead>';
+    html += '<tbody>';
+    
+    const contas = [
+        { id: 37, nome: 'Disponível' },
+        { id: 45, nome: 'Créditos' },
+        { id: 51, nome: 'Estoques' },
+        { id: 52, nome: 'TOTAL DO ATIVO CIRCULANTE' }
+    ];
+    
+    contas.forEach(conta => {
+        const valor = valores[conta.id] || 0;
+        const percentual = conta.id === 52 ? '100.00%' : formatarPercentual(valor, ativoCirculante);
+        const isTotal = conta.id === 52;
+        
+        html += `
+            <tr ${isTotal ? 'style="background-color: rgba(150, 202, 0, 0.1);"' : ''}>
+                <td ${isTotal ? 'class="fw-bold" style="color: var(--color-green-primary);"' : ''}>${conta.nome}</td>
+                <td class="text-end ${isTotal ? 'fw-bold' : ''}">${formatarMoeda(valor)}</td>
+                <td class="text-end ${isTotal ? 'fw-bold' : ''}">${percentual}</td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table>';
+    document.getElementById('secaoAtivo').innerHTML = html;
+}
+
+function renderizarSecaoCapital(valores) {
+    let html = '<table class="table table-dark">';
+    html += '<thead><tr><th>CONTA</th><th class="text-end">VALOR</th></tr></thead>';
+    html += '<tbody>';
+    
+    const contas = [
+        { id: 52, nome: 'Ativo Circulante' },
+        { id: 71, nome: 'Passivo Circulante' },
+        { id: 87, nome: 'CAPITAL CIRCULANTE' }
+    ];
+    
+    contas.forEach(conta => {
+        const valor = valores[conta.id] || 0;
+        const isTotal = conta.id === 87;
+        
+        html += `
+            <tr ${isTotal ? 'style="background-color: rgba(150, 202, 0, 0.1);"' : ''}>
+                <td ${isTotal ? 'class="fw-bold" style="color: var(--color-green-primary);"' : ''}>${conta.nome}</td>
+                <td class="text-end ${isTotal ? 'fw-bold' : ''}">${formatarMoeda(valor)}</td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table>';
+    document.getElementById('secaoCapital').innerHTML = html;
+}
+
+function renderizarSecaoIndices(valores, nfeResumo) {
+    let html = '<table class="table table-dark">';
+    html += '<thead><tr><th>ÍNDICE</th><th class="text-end">VALOR</th><th>DESCRIÇÃO</th></tr></thead>';
+    html += '<tbody>';
+    
+    // Liquidez Corrente
+    html += `
+        <tr>
+            <td>Liquidez Corrente</td>
+            <td class="text-end fw-bold">${(valores[84] || 0).toFixed(2)}</td>
+            <td class="text-muted">Ativo Circulante / Passivo Circulante</td>
+        </tr>
+    `;
+    
+    // Liquidez Seca
+    html += `
+        <tr>
+            <td>Liquidez Seca</td>
+            <td class="text-end fw-bold">${(valores[85] || 0).toFixed(2)}</td>
+            <td class="text-muted">(Ativo - Estoques - Adiant.) / Passivo Circulante</td>
+        </tr>
+    `;
+    
+    // Prazo Médio Recebimento
+    html += `
+        <tr>
+            <td>Prazo Médio Recebimento</td>
+            <td class="text-end fw-bold">${(valores[93] || 0).toFixed(2)} dias</td>
+            <td class="text-muted">Contas a Receber / Receita Diária</td>
+        </tr>
+    `;
+    
+    // Prazo Médio Pagamento
+    html += `
+        <tr>
+            <td>Prazo Médio Pagamento</td>
+            <td class="text-end fw-bold">${(valores[94] || 0).toFixed(2)} dias</td>
+            <td class="text-muted">Fornecedores / Compras Diárias</td>
+        </tr>
+    `;
+    
+    // Compras do Mês
+    html += `
+        <tr style="background-color: rgba(150, 202, 0, 0.1);">
+            <td class="fw-bold" style="color: var(--color-green-primary);">Compras do Mês</td>
+            <td class="text-end fw-bold" style="color: var(--color-green-primary);">${formatarMoeda(valores[95] || 0)}</td>
+            <td class="text-muted">${nfeResumo.quantidade || 0} NF-e de Entrada</td>
+        </tr>
+    `;
+    
+    html += '</tbody></table>';
+    document.getElementById('secaoIndices').innerHTML = html;
+}
+
+async function importarNFe() {
+    const fileInput = document.getElementById('fileNFe');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Selecione um arquivo Excel!');
+        return;
+    }
+    
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        alert('Arquivo deve ser .xlsx ou .xls');
+        return;
+    }
+    
+    document.getElementById('progressoNFe').style.display = 'block';
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('/api/upload-nfe', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        document.getElementById('progressoNFe').style.display = 'none';
+        
+        if (result.success) {
+            alert('✅ ' + result.message);
+            fileInput.value = '';
+            
+            // Recarregar se houver mês selecionado
+            const mes = document.getElementById('mes').value;
+            const ano = document.getElementById('ano').value;
+            if (mes && ano) {
+                carregarEbitda();
+            }
+        } else {
+            alert('❌ Erro: ' + result.message);
+        }
+        
+    } catch (error) {
+        document.getElementById('progressoNFe').style.display = 'none';
+        console.error('Erro:', error);
+        alert('❌ Erro ao importar arquivo!');
+    }
+}
+</script>
+{% endblock %}

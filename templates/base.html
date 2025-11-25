@@ -55,6 +55,12 @@
                         <span>DRE</span>
                     </a>
                 </li>
+                <li class="sidebar-item {% if request.endpoint == 'ebitda' %}active{% endif %}">
+                    <a href="{{ url_for('ebitda') }}" class="sidebar-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Análise EBITDA</span>
+                    </a>
+                </li>
                 <li class="sidebar-item {% if request.endpoint == 'capital_giro' %}active{% endif %}">
                     <a href="{{ url_for('capital_giro') }}" class="sidebar-link">
                         <i class="fas fa-coins"></i>
