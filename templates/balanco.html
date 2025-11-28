@@ -280,23 +280,66 @@
         atualizarKPI('capitalCirculante', valores[87] || 0, true);
     }
 
-// Auto-carregar último mês disponível
-    window.addEventListener('DOMContentLoaded', async () => {
-        try {
-            const response = await fetch('/api/dashboard/ultimos-meses');
-            const data = await response.json();
-            
-            if (data.length > 0) {
-                const ultimo = data[0];
-                document.getElementById('mes').value = ultimo.mes;
-                document.getElementById('ano').value = ultimo.ano;
-                
-                // Chama a função específica desta tela
-                await carregarBalanco();
-            }
-        } catch (error) {
-            console.error('Erro ao carregar dados iniciais:', error);
+// Inicialização automática com Mês Anterior e Anos Dinâmicos
+document.addEventListener('DOMContentLoaded', async function() {
+    
+    // 1. Carregar anos disponíveis
+    try {
+        const res = await fetch('/api/anos-disponiveis');
+        if (res.ok) {
+            const anos = await res.json();
+            const selectAno = document.getElementById('ano');
+            selectAno.innerHTML = '<option value="">Ano...</option>';
+            anos.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a;
+                opt.textContent = a;
+                selectAno.appendChild(opt);
+            });
         }
-    });    
+    } catch (e) { console.error("Erro ao carregar anos:", e); }
+
+    // 2. Calcular Mês Anterior
+    const hoje = new Date();
+    let mes = hoje.getMonth(); // 0-11
+    let ano = hoje.getFullYear();
+
+    if (mes === 0) { // Janeiro vira Dezembro
+        mes = 12;
+        ano = ano - 1;
+    }
+
+    // 3. Definir nos campos
+    const elMes = document.getElementById('mes');
+    const elAno = document.getElementById('ano');
+
+    if (elMes && elAno) {
+        elMes.value = mes;
+        
+        // Verifica se o ano existe na lista, se não, adiciona para evitar erro visual
+        let anoEncontrado = false;
+        for(let op of elAno.options) {
+            if(op.value == ano) {
+                elAno.value = ano;
+                anoEncontrado = true;
+                break;
+            }
+        }
+        if(!anoEncontrado) {
+            const opt = document.createElement('option');
+            opt.value = ano;
+            opt.textContent = ano;
+            elAno.appendChild(opt);
+            elAno.value = ano;
+        }
+
+        console.log(`📅 Carregando Balanço de: ${mes}/${ano}`);
+
+        // 4. Disparar carregamento do Balanço
+        if (typeof carregarBalanco === 'function') {
+            await carregarBalanco();
+        }
+    }
+});   
 </script>
 {% endblock %}

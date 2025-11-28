@@ -996,24 +996,32 @@ def api_ponto_equilibrio_ii_mensal_2025():
 #ROTAS DE INTEGRAÇÃO OMIE
 @app.route('/api/integracao/sincronizar-omie', methods=['POST'])
 def api_sincronizar_omie():
-    """Rota para disparar a sincronização manual"""
+    from services.omie_service import OmieService
+    from services.calculadora import Calculadora
+    
     try:
+        # Pega as datas enviadas pelo JSON
+        dados = request.json or {}
+        data_inicio = dados.get('data_inicio')
+        data_fim = dados.get('data_fim')
+
+        # Validação básica
+        if not data_inicio or not data_fim:
+            return jsonify({'error': 'Por favor, selecione o período completo (Início e Fim).'}), 400
+
         service = OmieService()
-        resultado = service.sincronizar_ultimos_60_dias()
+        # Passa as datas para o serviço
+        resultado = service.sincronizar_por_periodo(data_inicio, data_fim)
         
-        # Opcional: Recalcular fórmulas gerais após atualizar a conta 95
-        from services.calculadora import Calculadora
-        # Pega o mês atual como referência para recálculo rápido
+        # Recalcula o resto do sistema com base na data atual (opcional, mas bom para garantir)
         agora = datetime.now()
-        
-        # CORREÇÃO AQUI: Usar .month em vez de .mes
         calc = Calculadora(agora.month, agora.year)
         calc.calcular_todas_contas()
         
         return jsonify(resultado)
     except Exception as e:
         print(f"Erro na sincronização: {e}")
-        return jsonify({'error': str(e)}), 500   
+        return jsonify({'error': str(e)}), 500  
     
 #NOVAS ROTAS DE IMPORTAÇÃO DE NF E BAIXAR MODELO
 # --- ROTA PARA BAIXAR O MODELO EXCEL ---

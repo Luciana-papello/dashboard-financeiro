@@ -167,23 +167,33 @@
     // Função para carregar KPIs
     async function carregarKPIs() {
         try {
-            // Buscar dados de receita acumulada
+            // Buscar dados
             const resReceita = await fetch('/api/evolucao-receita/receita-acumulada-historico');
             const dataReceita = await resReceita.json();
 
-            // Buscar dados de disponível
             const resDisponivel = await fetch('/api/evolucao-receita/total-disponivel-historico');
             const dataDisponivel = await resDisponivel.json();
 
-            // 1. Descobrir último mês com dados em 2025 (para saber o YTD real)
+            // 1. Definir Limite de Busca (Regra do Mês Anterior)
+            const hoje = new Date();
+            let limiteIndex = 11; // Padrão: Dezembro (mostra ano todo)
+
+            // Se estamos no ano de análise (2025), limitamos ao mês passado
+            if (hoje.getFullYear() === 2025) {
+                // Ex: Se hoje é Nov (10), limite vira Out (9). Mínimo 0 (Jan).
+                limiteIndex = Math.max(0, hoje.getMonth() - 1);
+            }
+
+            // 2. Descobrir último mês COM DADOS dentro do limite permitido
             let ultimoMesIndex = 0; 
-            for (let i = 11; i >= 0; i--) {
+            for (let i = limiteIndex; i >= 0; i--) {
                 if (dataReceita.dados_2025[i] > 0) {
                     ultimoMesIndex = i;
                     break;
                 }
             }
-            // Nome do mês final (ex: "Outubro")
+            
+            // Configuração de nomes dos meses
             const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                           'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
             const nomeMesFinal = meses[ultimoMesIndex];
@@ -191,55 +201,72 @@
 
             // --- KPI 1: Receita 2025 YTD ---
             const valorReceita2025 = dataReceita.dados_2025[ultimoMesIndex];
-            document.getElementById('receita2025YTD').textContent = formatarMoeda(valorReceita2025);
-            // Texto dinâmico: "Janeiro a Novembro"
-            document.getElementById('periodo2025').textContent = `Janeiro a ${nomeMesFinal}`;
+            
+            const elReceita = document.getElementById('receita2025YTD');
+            if (elReceita) {
+                elReceita.textContent = formatarMoeda(valorReceita2025);
+                // Cor Vermelha se negativo (raro em receita, mas bom ter)
+                elReceita.style.color = valorReceita2025 < 0 ? '#ff6b6b' : '';
+            }
+            
+            // Texto dinâmico: "Janeiro a Outubro"
+            const elPeriodo = document.getElementById('periodo2025');
+            if (elPeriodo) elPeriodo.textContent = `Janeiro a ${nomeMesFinal}`;
 
             // --- KPI 2: Crescimento vs 2024 ---
             const crescimento = dataReceita.crescimentos['2025'] || 0;
-            const icone = crescimento >= 0 ? '<i class="fas fa-caret-up me-1"></i>' : '<i class="fas fa-caret-down me-1"></i>';
+            const icone = crescimento >= 0 ? '<i class="fas fa-arrow-trend-up me-1"></i>' : '<i class="fas fa-arrow-trend-down me-1"></i>';
             const cor = crescimento >= 0 ? 'var(--color-green-primary)' : '#ff4444';
             
-            // Atualiza valor com ícone e cor
             const elCrescimento = document.getElementById('crescimento2025');
-            elCrescimento.innerHTML = `${icone} ${Math.abs(crescimento).toFixed(1)}%`;
-            elCrescimento.style.color = cor;
-            
-            // Atualiza subtexto para mostrar período exato (ex: "Comp. Jan-Nov")
-            // Nota: Precisamos garantir que o HTML tenha um ID para isso ou usamos querySelector
-            // Como no passo 2 usamos uma estrutura genérica, vamos injetar o texto na div kpi-subtext irmã
-            const cardCrescimento = elCrescimento.closest('.kpi-content');
-            const subtextCrescimento = cardCrescimento.querySelector('.kpi-subtext');
-            if(subtextCrescimento) subtextCrescimento.textContent = `Comp. Jan-${nomeMesAbrev} (vs 2024)`;
+            if (elCrescimento) {
+                elCrescimento.innerHTML = `${icone} ${Math.abs(crescimento).toFixed(1)}%`;
+                elCrescimento.style.color = cor;
+                
+                // Legenda dinâmica
+                const cardCrescimento = elCrescimento.closest('.kpi-content');
+                const subtextCrescimento = cardCrescimento ? cardCrescimento.querySelector('.kpi-subtext') : null;
+                if(subtextCrescimento) subtextCrescimento.textContent = `Comp. Jan-${nomeMesAbrev} (vs 2024)`;
+            }
 
             // --- KPI 3: Disponível Atual ---
-            // Pega o valor do último mês disponível (pode ser diferente da receita se não houver lançamento)
+            // Busca o valor do mês de referência (respeitando o limite do mês anterior)
             let indexDisp = 0;
-            for (let i = 11; i >= 0; i--) {
-                if (dataDisponivel.dados_2025[i] > 0) {
+            for (let i = limiteIndex; i >= 0; i--) {
+                if (dataDisponivel.dados_2025[i] !== 0) { // Aceita negativo, só ignora zero exato se for placeholder
                     indexDisp = i;
                     break;
                 }
             }
             const valorDisponivel = dataDisponivel.dados_2025[indexDisp];
-            document.getElementById('disponivelAtual').textContent = formatarMoeda(valorDisponivel);
-            document.getElementById('mesDisponivel').textContent = `${meses[indexDisp]}/2025`;
+            
+            const elDispAtual = document.getElementById('disponivelAtual');
+            if (elDispAtual) {
+                elDispAtual.textContent = formatarMoeda(valorDisponivel);
+                // COR DE ALERTA: Vermelho se negativo, Verde se positivo
+                elDispAtual.style.color = valorDisponivel < 0 ? '#ff6b6b' : 'var(--color-green-primary)';
+            }
+            
+            const elMesDisp = document.getElementById('mesDisponivel');
+            if (elMesDisp) elMesDisp.textContent = `${meses[indexDisp]}/2025`;
 
             // --- KPI 4: Disponível vs Média 2024 ---
-            // Calcula média de 2024 (somente meses > 0 para não distorcer se ano incompleto, mas 2024 é cheio)
             const soma2024 = dataDisponivel.dados_2024.reduce((a, b) => a + b, 0);
             const media2024 = soma2024 / 12;
             
             const variacaoDisp = media2024 ? ((valorDisponivel - media2024) / media2024) * 100 : 0;
-            const iconeDisp = variacaoDisp >= 0 ? '<i class="fas fa-caret-up me-1"></i>' : '<i class="fas fa-caret-down me-1"></i>';
+            const iconeDisp = variacaoDisp >= 0 ? '<i class="fas fa-arrow-trend-up me-1"></i>' : '<i class="fas fa-arrow-trend-down me-1"></i>';
             const corDisp = variacaoDisp >= 0 ? 'var(--color-green-primary)' : '#ff4444';
             
             const elDispMedia = document.getElementById('disponivelVsMedia');
-            elDispMedia.innerHTML = `${iconeDisp} ${Math.abs(variacaoDisp).toFixed(1)}%`;
-            elDispMedia.style.color = corDisp;
+            if (elDispMedia) {
+                elDispMedia.innerHTML = `${iconeDisp} ${Math.abs(variacaoDisp).toFixed(1)}%`;
+                elDispMedia.style.color = corDisp;
+            }
 
             // Exibir container
-            document.getElementById('kpisEvolucaoReceita').style.display = 'flex';
+            const containerKPIs = document.getElementById('kpisEvolucaoReceita');
+            if (containerKPIs) containerKPIs.style.display = 'flex';
 
         } catch (error) {
             console.error('❌ Erro ao carregar KPIs:', error);

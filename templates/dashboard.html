@@ -842,49 +842,60 @@ async function carregarGraficoCapitalCirculanteHistorico() {
 // Auto-carregar dashboard e anos ao entrar na página
 window.addEventListener('DOMContentLoaded', async () => {
     try {
-        // 1. Carregar lista de anos disponíveis
+        // 1. Carregar lista de anos disponíveis (mantém sua lógica dinâmica)
         const resAnos = await fetch('/api/anos-disponiveis');
-        const anos = await resAnos.json();
-        
-        const selectAno = document.getElementById('ano');
-        
-        // Limpar e preencher o select
-        selectAno.innerHTML = '<option value="">Selecione...</option>';
-        
-        anos.forEach(ano => {
-            const option = document.createElement('option');
-            option.value = ano;
-            option.textContent = ano;
-            selectAno.appendChild(option);
-        });
-
-        // 2. Carregar últimos meses para definir o padrão
-        const response = await fetch('/api/dashboard/ultimos-meses');
-        const data = await response.json();
-        
-        if (data.length > 0) {
-            const ultimo = data[0];
-            
-            // Define o mês
-            document.getElementById('mes').value = ultimo.mes;
-            
-            // Define o ano (verifica se existe na lista, senão adiciona)
-            if ([...selectAno.options].some(o => o.value == ultimo.ano)) {
-                selectAno.value = ultimo.ano;
-            } else {
-                // Caso o ano retornado não esteja na lista (ex: ano novo recém criado)
+        if (resAnos.ok) {
+            const anos = await resAnos.json();
+            const selectAno = document.getElementById('ano');
+            selectAno.innerHTML = '<option value="">Selecione...</option>';
+            anos.forEach(ano => {
                 const option = document.createElement('option');
-                option.value = ultimo.ano;
-                option.textContent = ultimo.ano;
-                option.selected = true;
+                option.value = ano;
+                option.textContent = ano;
                 selectAno.appendChild(option);
-            }
-            
-            // Carrega os dados
-            await carregarDashboard();
+            });
         }
+
+        // 2. Lógica do Mês Anterior (NOVO)
+        const hoje = new Date();
+        let mesAlvo = hoje.getMonth(); // Retorna 0-11 (que equivale ao mês anterior em valor 1-12)
+        let anoAlvo = hoje.getFullYear();
+
+        if (mesAlvo === 0) { // Se for Janeiro
+            mesAlvo = 12;    // Vira Dezembro
+            anoAlvo = anoAlvo - 1; // Do ano passado
+        }
+
+        // Define os valores nos selects
+        document.getElementById('mes').value = mesAlvo;
+        
+        // Verifica se o ano alvo existe na lista, se não, adiciona
+        const selectAno = document.getElementById('ano');
+        let anoExiste = false;
+        for (let i = 0; i < selectAno.options.length; i++) {
+            if (parseInt(selectAno.options[i].value) === anoAlvo) {
+                selectAno.value = anoAlvo;
+                anoExiste = true;
+                break;
+            }
+        }
+        
+        // Se o ano anterior não estiver na lista (ex: banco novo), adiciona forçadamente
+        if (!anoExiste) {
+            const option = document.createElement('option');
+            option.value = anoAlvo;
+            option.textContent = anoAlvo;
+            selectAno.appendChild(option);
+            selectAno.value = anoAlvo;
+        }
+
+        console.log(`📅 Iniciando Dashboard em: ${mesAlvo}/${anoAlvo}`);
+        
+        // 3. Carrega os dados
+        await carregarDashboard();
+
     } catch (error) {
-        console.error('Erro ao carregar dados iniciais:', error);
+        console.error('Erro na inicialização:', error);
     }
 });
 </script>

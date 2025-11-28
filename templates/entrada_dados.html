@@ -15,23 +15,37 @@
     </div>
     <!-- Sincronizar NF omie -->
     <div class="row mb-4">
+    <!-- Card 1 - Integração Omie -->
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header bg-info text-white">
                 <i class="fas fa-sync-alt me-2"></i>Integração Automática (Omie)
             </div>
-            <div class="card-body d-flex align-items-center justify-content-between">
-                <div>
-                    <p class="mb-0 text-muted">Sincroniza notas fiscais dos últimos 365 dias.</p>
-                    <small>Empresas: Empo, Papello, RAO</small>
+            <div class="card-body">
+                <p class="mb-2 text-muted small">Selecione o período para buscar notas de entrada (Operação 21).</p>
+                <div class="row g-2 align-items-end">
+                    <div class="col-4">
+                        <label class="form-label small fw-bold mb-1">De:</label>
+                        <input type="date" id="syncDataInicio" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small fw-bold mb-1">Até:</label>
+                        <input type="date" id="syncDataFim" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-4">
+                        <button id="btnSincronizarOmie" class="btn btn-sm btn-outline-info w-100" onclick="sincronizarOmie()">
+                            <i class="fas fa-play me-1"></i>Sincronizar
+                        </button>
+                    </div>
                 </div>
-                <button id="btnSincronizarOmie" class="btn btn-outline-info" onclick="sincronizarOmie()">
-                    <i class="fas fa-play me-2"></i>Sincronizar
-                </button>
+                <div class="mt-2 text-end">
+                    <small class="text-muted" style="font-size: 0.75rem;">Empresas: Empo, Papello, RAO</small>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Card 2 - Importação Manual -->
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header bg-success text-white">
@@ -66,6 +80,8 @@
         </div>
     </div>
 </div>
+
+   
  <!-- entrada de dados de NF MANUAL -->
 
  <div class="row mb-4">
@@ -287,10 +303,24 @@
 
 {% block extra_js %}
 <script>
+    // Variáveis globais
     let mesSelecionado = null;
     let anoSelecionado = null;
+
+    // --- 1. FUNÇÕES UTILITÁRIAS ---
     
-    // Função para carregar as contas do banco
+    // Esta função deve estar no topo para ser acessível por todo o script
+    function formatarMoeda(valor) {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2
+        }).format(valor);
+    }
+
+    // --- 2. GESTÃO DE DADOS MANUAIS (BALANÇO/DRE) ---
+
+    // Carregar dados ao selecionar mês/ano
     async function carregarDados() {
         const mes = document.getElementById('mes').value;
         const ano = document.getElementById('ano').value;
@@ -326,7 +356,6 @@
         }
     }
 
-    // Função para renderizar o formulário
     function renderizarFormulario(elementId, contas, valores) {
         const container = document.getElementById(elementId);
         
@@ -336,8 +365,6 @@
         }
 
         let html = '<div class="row">';
-        
-        // Agrupar por categoria
         const categorias = [...new Set(contas.map(c => c.categoria || 'Outros'))];
         
         categorias.forEach(categoria => {
@@ -381,7 +408,6 @@
         container.innerHTML = html;
     }
 
-    // Função para salvar dados
     async function salvarDados() {
         if (!mesSelecionado || !anoSelecionado) {
             alert('Selecione o mês e ano primeiro!');
@@ -394,7 +420,6 @@
             valores: {}
         };
 
-        // Coletar todos os valores dos inputs
         const inputs = document.querySelectorAll('input[id^="conta_"]');
         inputs.forEach(input => {
             const contaId = input.id.replace('conta_', '');
@@ -405,9 +430,7 @@
         try {
             const response = await fetch('/api/salvar-dados', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dados)
             });
 
@@ -415,18 +438,16 @@
 
             if (result.success) {
                 alert('✅ Dados salvos com sucesso!');
-                // Recarregar para mostrar valores calculados
                 carregarDados();
             } else {
                 alert('❌ Erro ao salvar: ' + result.message);
             }
         } catch (error) {
             console.error('Erro:', error);
-            alert('❌ Erro ao salvar dados. Verifique o console.');
+            alert('❌ Erro ao salvar dados.');
         }
     }
 
-    // Função para limpar formulário
     function limparFormulario() {
         document.getElementById('mes').value = '';
         document.getElementById('ano').value = '';
@@ -436,158 +457,76 @@
         anoSelecionado = null;
     }
 
-    // Função para importar Excel (será implementada depois)
-    function importarExcel() {
-        alert('🚧 Funcionalidade de importação Excel será implementada em breve!');
+    // --- 3. IMPORTAÇÃO EXCEL (NFe) ---
+
+    // Função para baixar template
+    function baixarTemplate() {
+        window.location.href = '/api/gerar-template-excel'; // Confirme se esta rota existe no seu app.py, ou use /api/nfe/download-template se for a que criámos antes
     }
 
-
-
-// Função para baixar template
-function baixarTemplate() {
-    window.location.href = '/api/gerar-template-excel';
-}
-
-// Função para importar Excel
-async function importarExcel() {
-    const fileInput = document.getElementById('fileExcel');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('Por favor, selecione um arquivo Excel!');
-        return;
-    }
-    
-    // Validar extensão
-    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-        alert('Por favor, selecione um arquivo .xlsx ou .xls');
-        return;
-    }
-    
-    // Mostrar progresso
-    document.getElementById('progressoImportacao').style.display = 'block';
-    
-    try {
-        // Criar FormData
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        // Enviar arquivo
-        const response = await fetch('/api/upload-excel', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        // Esconder progresso
-        document.getElementById('progressoImportacao').style.display = 'none';
-        
-        if (result.success) {
-            alert('✅ ' + result.message);
-            
-            // Limpar input
-            fileInput.value = '';
-            
-            // Recarregar dados se houver mês/ano selecionado
-            if (mesSelecionado && anoSelecionado) {
-                carregarDados();
+    // Listener para mostrar nome do arquivo selecionado no campo de input
+    const fileInput = document.getElementById('fileUploadNfe');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const display = document.getElementById('fileNameDisplay');
+                const actionArea = document.getElementById('areaUploadAction');
+                if(display) display.textContent = this.files[0].name;
+                if(actionArea) actionArea.style.display = 'block';
             }
-        } else {
-            alert('❌ Erro na importação: ' + result.message);
-        }
-        
-    } catch (error) {
-        document.getElementById('progressoImportacao').style.display = 'none';
-        console.error('Erro:', error);
-        alert('❌ Erro ao importar arquivo. Verifique o console.');
+        });
     }
-}
 
-// Função para importar Notas Fiscais
-    async function importarNFe() {
-        const fileInput = document.getElementById('fileNFe');
+    // Função principal para importar Excel (Via botão "Importar Excel" geral)
+    async function importarExcel() {
+        const fileInput = document.getElementById('fileExcel'); // Input da secção inferior
         const file = fileInput.files[0];
         
         if (!file) {
-            alert('Selecione um arquivo Excel de NF-e!');
+            alert('Por favor, selecione um arquivo Excel!');
             return;
         }
         
-        document.getElementById('progressoNFe').style.display = 'block';
+        if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+            alert('Por favor, selecione um arquivo .xlsx ou .xls');
+            return;
+        }
+        
+        const progress = document.getElementById('progressoImportacao');
+        if(progress) progress.style.display = 'block';
         
         try {
             const formData = new FormData();
             formData.append('file', file);
             
-            const response = await fetch('/api/upload-nfe', {
+            // Ajuste a rota conforme o seu app.py (/api/upload-excel ou /api/nfe/importar-manual)
+            const response = await fetch('/api/upload-excel', { 
                 method: 'POST',
                 body: formData
             });
             
             const result = await response.json();
             
-            document.getElementById('progressoNFe').style.display = 'none';
+            if(progress) progress.style.display = 'none';
             
             if (result.success) {
                 alert('✅ ' + result.message);
                 fileInput.value = '';
-                // Se houver mês selecionado, recarrega dados
                 if (mesSelecionado && anoSelecionado) {
                     carregarDados();
                 }
             } else {
-                alert('❌ Erro: ' + result.message);
+                alert('❌ Erro na importação: ' + result.message);
             }
             
         } catch (error) {
-            document.getElementById('progressoNFe').style.display = 'none';
+            if(progress) progress.style.display = 'none';
             console.error('Erro:', error);
-            alert('❌ Erro ao importar arquivo!');
+            alert('❌ Erro ao importar arquivo. Verifique o console.');
         }
     }
 
-    async function sincronizarOmie() {
-        const btn = document.getElementById('btnSincronizarOmie');
-        const icon = btn.querySelector('i');
-        
-        // Estado de Carregamento
-        btn.disabled = true;
-        const textoOriginal = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Buscando Notas...';
-        
-        try {
-            const response = await fetch('/api/integracao/sincronizar-omie', {
-                method: 'POST'
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                alert(`Sucesso! ${data.notas_processadas} notas processadas/verificadas.`);
-                // Recarrega a página para mostrar os novos valores na tabela
-                window.location.reload();
-            } else {
-                alert('Erro na sincronização: ' + (data.error || 'Erro desconhecido'));
-            }
-        } catch (error) {
-            console.error('Erro:', error);
-            alert('Erro de comunicação com o servidor.');
-        } finally {
-            // Restaura botão
-            btn.disabled = false;
-            btn.innerHTML = textoOriginal;
-        }
-    }
-
-   document.getElementById('fileUploadNfe').addEventListener('change', function(e) {
-        if (this.files && this.files[0]) {
-            document.getElementById('fileNameDisplay').textContent = this.files[0].name;
-            document.getElementById('areaUploadAction').style.display = 'block';
-        }
-    });
-
-    // Função para Enviar a Planilha
+    // Função específica para o card "Importação Manual (Excel)" de NFe
     async function enviarPlanilhaNfe() {
         const fileInput = document.getElementById('fileUploadNfe');
         const file = fileInput.files[0];
@@ -597,11 +536,12 @@ async function importarExcel() {
         const formData = new FormData();
         formData.append('file', file);
 
-        // UI de Carregamento
         const btn = document.querySelector('#areaUploadAction button');
-        const textoOriginal = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+        const textoOriginal = btn ? btn.innerHTML : 'Confirmar';
+        if(btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+        }
 
         try {
             const response = await fetch('/api/nfe/importar-manual', {
@@ -612,7 +552,7 @@ async function importarExcel() {
             const data = await response.json();
             
             if (response.ok) {
-                alert(data.mensagem);
+                alert(data.mensagem || 'Importação realizada com sucesso!');
                 window.location.reload();
             } else {
                 alert('Erro: ' + (data.error || 'Falha ao importar'));
@@ -621,13 +561,66 @@ async function importarExcel() {
             console.error(error);
             alert('Erro de conexão ao enviar arquivo.');
         } finally {
+            if(btn) {
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+            }
+        }
+    }
+
+    // --- 4. SINCRONIZAÇÃO OMIE ---
+
+    async function sincronizarOmie() {
+        const btn = document.getElementById('btnSincronizarOmie');
+        const dtInicio = document.getElementById('syncDataInicio').value;
+        const dtFim = document.getElementById('syncDataFim').value;
+
+        // Validação de datas
+        if (!dtInicio || !dtFim) {
+            alert('⚠️ Por favor, preencha a Data Inicial e Final para sincronizar.');
+            return;
+        }
+
+        if (dtInicio > dtFim) {
+            alert('⚠️ A Data Inicial não pode ser maior que a Data Final.');
+            return;
+        }
+        
+        // Estado de Carregamento
+        btn.disabled = true;
+        const textoOriginal = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        try {
+            const response = await fetch('/api/integracao/sincronizar-omie', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data_inicio: dtInicio,
+                    data_fim: dtFim
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert(`✅ Sucesso! ${data.notas_processadas} notas encontradas e processadas.`);
+                window.location.reload();
+            } else {
+                alert('Erro na sincronização: ' + (data.error || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro de comunicação com o servidor.');
+        } finally {
             btn.disabled = false;
             btn.innerHTML = textoOriginal;
         }
-    } 
+    }
+
+    // --- 5. LANÇAMENTO MANUAL AVULSO DE NFe ---
 
     async function enviarNotaManual() {
-        // Coletar dados
         const data = document.getElementById('manData').value;
         const valor = document.getElementById('manValor').value;
         const numero = document.getElementById('manNumero').value;
@@ -635,7 +628,6 @@ async function importarExcel() {
         const empresa = document.getElementById('manEmpresa').value;
         const descricao = document.getElementById('manDescricao').value;
 
-        // Validação simples
         if (!data || !valor) {
             alert('Por favor, preencha Data e Valor.');
             return;
@@ -650,7 +642,6 @@ async function importarExcel() {
             descricao: descricao
         };
 
-        // Botão Loading
         const btn = document.querySelector('#formManualNfe button');
         const txtOriginal = btn.innerHTML;
         btn.disabled = true;
@@ -666,11 +657,9 @@ async function importarExcel() {
             const result = await response.json();
 
             if (response.ok) {
+                // Formatar moeda agora funcionará corretamente
                 alert(`✅ ${result.mensagem}\nTotal do Mês Atualizado: ${formatarMoeda(result.total_atualizado)}`);
-                // Limpar formulário
                 document.getElementById('formManualNfe').reset();
-                // Opcional: Recarregar a página para atualizar tabelas
-                // window.location.reload(); 
             } else {
                 alert('Erro: ' + (result.error || 'Falha ao salvar'));
             }
