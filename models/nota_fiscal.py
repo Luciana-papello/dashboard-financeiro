@@ -1,44 +1,26 @@
-from models import db
-from datetime import datetime
+from app import db
 
 class NotaFiscal(db.Model):
-    """Modelo da tabela NotasFiscais - Armazena dados de NF-e de entrada"""
-    
     __tablename__ = 'notas_fiscais'
-    
-    # Colunas da tabela
+
     id = db.Column(db.Integer, primary_key=True)
-    tipo_nfe = db.Column(db.String(50))  # 'Entrada' ou 'Saída'
+    chave_externa = db.Column(db.String(100), unique=True, nullable=True) # ID Único do Omie
+    
+    # Campos simplificados para bater com o serviço
+    numero = db.Column(db.String(50))
+    descricao = db.Column(db.String(200))
+    fornecedor = db.Column(db.String(200))
+    valor = db.Column(db.Float)
     data_emissao = db.Column(db.Date)
-    situacao = db.Column(db.String(100))
-    numero_nfe = db.Column(db.String(50))
-    cnpj_cpf = db.Column(db.String(20))
-    nome_fantasia = db.Column(db.String(200))
-    valor_nfe = db.Column(db.Float)
-    categorias = db.Column(db.String(200))
-    razao_social = db.Column(db.String(200))
-    valor_icms = db.Column(db.String(100))
-    natureza_operacao = db.Column(db.String(200))
-    empresa = db.Column(db.String(200))
-    mes = db.Column(db.Integer)  # Extraído da data_emissao
-    ano = db.Column(db.Integer)  # Extraído da data_emissao
-    data_importacao = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Índice para melhorar performance
-    __table_args__ = (
-        db.Index('idx_mes_ano_tipo', 'mes', 'ano', 'tipo_nfe'),
-    )
+    mes = db.Column(db.Integer)
+    ano = db.Column(db.Integer)
     
+    conta_id = db.Column(db.Integer, db.ForeignKey('contas.id'))
+    categoria = db.Column(db.String(100))
+    
+    # Campo para saber de qual empresa veio (Empo, Papello, RAO)
+    empresa = db.Column(db.String(50)) 
+
     def __repr__(self):
-        return f'<NotaFiscal {self.numero_nfe}: R${self.valor_nfe}>'
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'tipo_nfe': self.tipo_nfe,
-            'data_emissao': self.data_emissao.isoformat() if self.data_emissao else None,
-            'numero_nfe': self.numero_nfe,
-            'valor_nfe': self.valor_nfe,
-            'mes': self.mes,
-            'ano': self.ano
-        }
+        return f'<NotaFiscal {self.numero} - R$ {self.valor}>'

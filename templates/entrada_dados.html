@@ -13,7 +13,110 @@
             <p class="text-muted">Insira os valores financeiros do mês ou importe uma planilha Excel</p>
         </div>
     </div>
+    <!-- Sincronizar NF omie -->
+    <div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-sync-alt me-2"></i>Integração Automática (Omie)
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <p class="mb-0 text-muted">Sincroniza notas fiscais dos últimos 365 dias.</p>
+                    <small>Empresas: Empo, Papello, RAO</small>
+                </div>
+                <button id="btnSincronizarOmie" class="btn btn-outline-info" onclick="sincronizarOmie()">
+                    <i class="fas fa-play me-2"></i>Sincronizar
+                </button>
+            </div>
+        </div>
+    </div>
 
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-file-excel me-2"></i>Importação Manual (Excel)
+            </div>
+            <div class="card-body">
+                <div class="row g-2 align-items-center">
+                    <div class="col-12 mb-2">
+                        <small class="text-muted">Use o modelo padrão para importar notas extras.</small>
+                    </div>
+                    <div class="col-6">
+                        <a href="/api/nfe/download-template" class="btn btn-sm btn-outline-secondary w-100">
+                            <i class="fas fa-download me-1"></i> Baixar Modelo
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <input type="file" id="fileUploadNfe" class="form-control form-control-sm" accept=".xlsx" style="display: none;">
+                        <button class="btn btn-sm btn-success w-100" onclick="document.getElementById('fileUploadNfe').click()">
+                            <i class="fas fa-upload me-1"></i> Selecionar Arquivo
+                        </button>
+                    </div>
+                    <div class="col-12 mt-2" id="areaUploadAction" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
+                            <span id="fileNameDisplay" class="small text-truncate" style="max-width: 150px;"></span>
+                            <button class="btn btn-sm btn-primary" onclick="enviarPlanilhaNfe()">
+                                Confirmar Envio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+ <!-- entrada de dados de NF MANUAL -->
+
+ <div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-keyboard me-2"></i>Lançamento Manual Avulso</h5>
+            </div>
+            <div class="card-body">
+                <form id="formManualNfe">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label small">Data Emissão *</label>
+                            <input type="date" class="form-control" id="manData" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Número NF</label>
+                            <input type="text" class="form-control" id="manNumero" placeholder="12345">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Fornecedor</label>
+                            <input type="text" class="form-control" id="manFornecedor" placeholder="Nome do Fornecedor">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Valor (R$) *</label>
+                            <input type="number" step="0.01" class="form-control" id="manValor" placeholder="0.00" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Empresa</label>
+                            <select class="form-select" id="manEmpresa">
+                                <option value="Empo">Empo</option>
+                                <option value="Papello">Papello</option>
+                                <option value="RAO">RAO</option>
+                                <option value="Outra">Outra</option>
+                            </select>
+                        </div>
+                        <div class="col-md-10">
+                            <label class="form-label small">Descrição / Observação</label>
+                            <input type="text" class="form-control" id="manDescricao" placeholder="Detalhes do item...">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-warning w-100" onclick="enviarNotaManual()">
+                                <i class="fas fa-plus-circle me-2"></i>Lançar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
     <!-- Seleção de Mês e Ano -->
     <div class="row mb-4">
         <div class="col-md-12">
@@ -178,13 +281,15 @@
     </div>
 </div>
 
+
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
     let mesSelecionado = null;
     let anoSelecionado = null;
-
+    
     // Função para carregar as contas do banco
     async function carregarDados() {
         const mes = document.getElementById('mes').value;
@@ -336,6 +441,8 @@
         alert('🚧 Funcionalidade de importação Excel será implementada em breve!');
     }
 
+
+
 // Função para baixar template
 function baixarTemplate() {
     window.location.href = '/api/gerar-template-excel';
@@ -395,6 +502,185 @@ async function importarExcel() {
         console.error('Erro:', error);
         alert('❌ Erro ao importar arquivo. Verifique o console.');
     }
-}    
+}
+
+// Função para importar Notas Fiscais
+    async function importarNFe() {
+        const fileInput = document.getElementById('fileNFe');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            alert('Selecione um arquivo Excel de NF-e!');
+            return;
+        }
+        
+        document.getElementById('progressoNFe').style.display = 'block';
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const response = await fetch('/api/upload-nfe', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            document.getElementById('progressoNFe').style.display = 'none';
+            
+            if (result.success) {
+                alert('✅ ' + result.message);
+                fileInput.value = '';
+                // Se houver mês selecionado, recarrega dados
+                if (mesSelecionado && anoSelecionado) {
+                    carregarDados();
+                }
+            } else {
+                alert('❌ Erro: ' + result.message);
+            }
+            
+        } catch (error) {
+            document.getElementById('progressoNFe').style.display = 'none';
+            console.error('Erro:', error);
+            alert('❌ Erro ao importar arquivo!');
+        }
+    }
+
+    async function sincronizarOmie() {
+        const btn = document.getElementById('btnSincronizarOmie');
+        const icon = btn.querySelector('i');
+        
+        // Estado de Carregamento
+        btn.disabled = true;
+        const textoOriginal = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Buscando Notas...';
+        
+        try {
+            const response = await fetch('/api/integracao/sincronizar-omie', {
+                method: 'POST'
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert(`Sucesso! ${data.notas_processadas} notas processadas/verificadas.`);
+                // Recarrega a página para mostrar os novos valores na tabela
+                window.location.reload();
+            } else {
+                alert('Erro na sincronização: ' + (data.error || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro de comunicação com o servidor.');
+        } finally {
+            // Restaura botão
+            btn.disabled = false;
+            btn.innerHTML = textoOriginal;
+        }
+    }
+
+   document.getElementById('fileUploadNfe').addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            document.getElementById('fileNameDisplay').textContent = this.files[0].name;
+            document.getElementById('areaUploadAction').style.display = 'block';
+        }
+    });
+
+    // Função para Enviar a Planilha
+    async function enviarPlanilhaNfe() {
+        const fileInput = document.getElementById('fileUploadNfe');
+        const file = fileInput.files[0];
+        
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // UI de Carregamento
+        const btn = document.querySelector('#areaUploadAction button');
+        const textoOriginal = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+        try {
+            const response = await fetch('/api/nfe/importar-manual', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert(data.mensagem);
+                window.location.reload();
+            } else {
+                alert('Erro: ' + (data.error || 'Falha ao importar'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro de conexão ao enviar arquivo.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = textoOriginal;
+        }
+    } 
+
+    async function enviarNotaManual() {
+        // Coletar dados
+        const data = document.getElementById('manData').value;
+        const valor = document.getElementById('manValor').value;
+        const numero = document.getElementById('manNumero').value;
+        const fornecedor = document.getElementById('manFornecedor').value;
+        const empresa = document.getElementById('manEmpresa').value;
+        const descricao = document.getElementById('manDescricao').value;
+
+        // Validação simples
+        if (!data || !valor) {
+            alert('Por favor, preencha Data e Valor.');
+            return;
+        }
+
+        const payload = {
+            data_emissao: data,
+            valor: valor,
+            numero: numero,
+            fornecedor: fornecedor,
+            empresa: empresa,
+            descricao: descricao
+        };
+
+        // Botão Loading
+        const btn = document.querySelector('#formManualNfe button');
+        const txtOriginal = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+        try {
+            const response = await fetch('/api/nfe/lancar-manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert(`✅ ${result.mensagem}\nTotal do Mês Atualizado: ${formatarMoeda(result.total_atualizado)}`);
+                // Limpar formulário
+                document.getElementById('formManualNfe').reset();
+                // Opcional: Recarregar a página para atualizar tabelas
+                // window.location.reload(); 
+            } else {
+                alert('Erro: ' + (result.error || 'Falha ao salvar'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro de comunicação com o servidor.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = txtOriginal;
+        }
+    }
 </script>
 {% endblock %}

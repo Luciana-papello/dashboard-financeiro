@@ -53,41 +53,54 @@
             </div>
         </div>
     </div>
+<!-- KPIS PRINCIPAIS -->
+<div class="row mb-4" id="kpisEbitdaContainer" style="display: none;">
+        <div class="col-md-3 mb-3">
+            <div class="card kpi-card">
+                <div class="kpi-content">
+                    <div class="kpi-label">EBITDA</div>
+                    <div class="kpi-value" id="kpiEbitdaValor">-</div>
+                    <div class="kpi-subtext">Lucro Operacional Bruto</div>
+                </div>
+                <i class="fas fa-layer-group kpi-icon-bg"></i>
+            </div>
+        </div>
 
-    <!-- Importação de Notas Fiscais -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-file-invoice me-2"></i>Importar Notas Fiscais (Compras)
+        <div class="col-md-3 mb-3">
+            <div class="card kpi-card">
+                <div class="kpi-content">
+                    <div class="kpi-label">Margem EBITDA</div>
+                    <div class="kpi-value" id="kpiMargemEbitda">-</div>
+                    <div class="kpi-subtext">% da Receita</div>
                 </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Importante:</strong> Envie a planilha de NF-e com as colunas: Tipo da NF-e, Data de Emissão, Valor da NF-e. Apenas NF-e de "Entrada" serão importadas.
-                    </div>
-                    <div class="row">
-                        <div class="col-md-8">
-                            <input type="file" class="form-control" id="fileNFe" accept=".xlsx,.xls">
-                        </div>
-                        <div class="col-md-4">
-                            <button type="button" class="btn btn-success w-100" onclick="importarNFe()">
-                                <i class="fas fa-upload me-2"></i>Importar NF-e
-                            </button>
-                        </div>
-                    </div>
-                    <div id="progressoNFe" style="display: none;" class="mt-3">
-                        <div class="progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
-                                Importando...
-                            </div>
-                        </div>
-                    </div>
+                <i class="fas fa-percentage kpi-icon-bg"></i>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card kpi-card">
+                <div class="kpi-content">
+                    <div class="kpi-label">Receita Operacional</div>
+                    <div class="kpi-value" id="kpiReceita">-</div>
+                    <div class="kpi-subtext">Faturamento Total</div>
                 </div>
+                <i class="fas fa-hand-holding-usd kpi-icon-bg"></i>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card kpi-card">
+                <div class="kpi-content">
+                    <div class="kpi-label">Res. Operacional</div>
+                    <div class="kpi-value" id="kpiResultadoOp">-</div>
+                    <div class="kpi-subtext">Antes dos Ajustes</div>
+                </div>
+                <i class="fas fa-chart-line kpi-icon-bg"></i>
             </div>
         </div>
     </div>
 
+    
     <!-- SEÇÃO 1: Análise EBITDA -->
     <div class="row mb-4">
         <div class="col-md-12">
@@ -198,70 +211,150 @@ async function carregarEbitda() {
         alert('Erro ao carregar dados!');
     }
 }
+async function carregarEbitda() {
+        const mes = document.getElementById('mes').value;
+        const ano = document.getElementById('ano').value;
+
+        if (!mes || !ano) {
+            alert('Selecione mês e ano!');
+            return;
+        }
+
+        try {
+            // Buscar valores
+            const resValores = await fetch(`/api/valores/${mes}/${ano}`);
+            const valores = await resValores.json();
+
+            // Buscar resumo de NF-e
+            const resNFe = await fetch(`/api/nfe/resumo/${mes}/${ano}`);
+            const nfeResumo = await resNFe.json();
+
+            // Renderizar KPIs no Topo
+            renderizarKPIs(valores);
+
+            // Renderizar seções existentes
+            renderizarSecaoEbitda(valores);
+            renderizarSecaoAtivo(valores);
+            renderizarSecaoCapital(valores);
+            renderizarSecaoIndices(valores, nfeResumo);
+
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('Erro ao carregar dados!');
+        }
+    }
+
+    function renderizarKPIs(valores) {
+        document.getElementById('kpisEbitdaContainer').style.display = 'flex';
+
+        const receita = valores[1] || 0;
+        const ebitda = valores[21] || 0;
+        const resultadoOp = valores[18] || 0;
+        
+        // Cálculo da Margem EBITDA
+        const margem = receita !== 0 ? (ebitda / receita) * 100 : 0;
+
+        // Função auxiliar para atualizar com cor
+        const atualizarKPI = (id, valor, isPercentual = false) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = isPercentual ? valor : formatarMoeda(valor);
+                
+                // Verifica se é negativo (para percentual, checa o valor numérico original)
+                const numCheck = isPercentual ? parseFloat(valor) : valor;
+                el.style.color = numCheck < 0 ? '#ff6b6b' : '';
+            }
+        };
+
+        atualizarKPI('kpiEbitdaValor', ebitda);
+        atualizarKPI('kpiMargemEbitda', margem.toFixed(2) + '%', true);
+        atualizarKPI('kpiReceita', receita);
+        atualizarKPI('kpiResultadoOp', resultadoOp);
+    }
 
 function renderizarSecaoEbitda(valores) {
-    const receita = valores[1] || 0;
-    
-    let html = '<table class="table table-dark">';
-    html += '<thead><tr><th>CONTA</th><th class="text-end">VALOR</th><th class="text-end">%</th></tr></thead>';
-    html += '<tbody>';
-    
-    const contas = [
-        { id: 18, nome: 'Resultado Operacional' },
-        { id: 19, nome: 'Despesas Financeiras' },
-        { id: 20, nome: 'Depreciações' },
-        { id: 21, nome: 'EBITDA' }
-    ];
-    
-    contas.forEach(conta => {
-        const valor = valores[conta.id] || 0;
-        const percentual = formatarPercentual(valor, receita);
-        const isEbitda = conta.id === 21;
+        const receita = valores[1] || 0;
         
-        html += `
-            <tr ${isEbitda ? 'style="background-color: rgba(150, 202, 0, 0.1);"' : ''}>
-                <td ${isEbitda ? 'class="fw-bold" style="color: var(--color-green-primary);"' : ''}>${conta.nome}</td>
-                <td class="text-end ${isEbitda ? 'fw-bold' : ''}">${formatarMoeda(valor)}</td>
-                <td class="text-end ${isEbitda ? 'fw-bold' : ''}">${percentual}</td>
-            </tr>
-        `;
-    });
-    
-    html += '</tbody></table>';
-    document.getElementById('secaoEbitda').innerHTML = html;
-}
+        let html = '<table class="table table-dark">';
+        html += '<thead><tr><th>CONTA</th><th class="text-end">VALOR</th><th class="text-end">%</th></tr></thead>';
+        html += '<tbody>';
+        
+        const contas = [
+            { id: 18, nome: 'Resultado Operacional' },
+            { id: 19, nome: 'Despesas Financeiras' },
+            { id: 20, nome: 'Depreciações' },
+            { id: 21, nome: 'EBITDA' }
+        ];
+        
+        contas.forEach(conta => {
+            const valor = valores[conta.id] || 0;
+            const percentual = formatarPercentual(valor, receita);
+            const isEbitda = conta.id === 21;
+            
+            // --- LÓGICA DE COR CORRIGIDA ---
+            let estiloCor = '';
+            if (valor < 0) {
+                estiloCor = 'style="color: #ff6b6b !important;"';
+            } else if (isEbitda) {
+                estiloCor = 'style="color: var(--color-green-primary);"';
+            }
+            
+            const classe = isEbitda ? 'fw-bold' : '';
+            
+            html += `
+                <tr ${isEbitda ? 'style="background-color: rgba(150, 202, 0, 0.1);"' : ''}>
+                    <td class="${classe}" ${estiloCor}>${conta.nome}</td>
+                    <td class="text-end ${classe}" ${estiloCor}>${formatarMoeda(valor)}</td>
+                    <td class="text-end ${classe}" ${estiloCor}>${percentual}</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        document.getElementById('secaoEbitda').innerHTML = html;
+    }
 
 function renderizarSecaoAtivo(valores) {
-    const ativoCirculante = valores[52] || 0;
-    
-    let html = '<table class="table table-dark">';
-    html += '<thead><tr><th>CONTA</th><th class="text-end">VALOR</th><th class="text-end">%</th></tr></thead>';
-    html += '<tbody>';
-    
-    const contas = [
-        { id: 37, nome: 'Disponível' },
-        { id: 45, nome: 'Créditos' },
-        { id: 51, nome: 'Estoques' },
-        { id: 52, nome: 'TOTAL DO ATIVO CIRCULANTE' }
-    ];
-    
-    contas.forEach(conta => {
-        const valor = valores[conta.id] || 0;
-        const percentual = conta.id === 52 ? '100.00%' : formatarPercentual(valor, ativoCirculante);
-        const isTotal = conta.id === 52;
+        const ativoCirculante = valores[52] || 0;
         
-        html += `
-            <tr ${isTotal ? 'style="background-color: rgba(150, 202, 0, 0.1);"' : ''}>
-                <td ${isTotal ? 'class="fw-bold" style="color: var(--color-green-primary);"' : ''}>${conta.nome}</td>
-                <td class="text-end ${isTotal ? 'fw-bold' : ''}">${formatarMoeda(valor)}</td>
-                <td class="text-end ${isTotal ? 'fw-bold' : ''}">${percentual}</td>
-            </tr>
-        `;
-    });
-    
-    html += '</tbody></table>';
-    document.getElementById('secaoAtivo').innerHTML = html;
-}
+        let html = '<table class="table table-dark">';
+        html += '<thead><tr><th>CONTA</th><th class="text-end">VALOR</th><th class="text-end">%</th></tr></thead>';
+        html += '<tbody>';
+        
+        const contas = [
+            { id: 37, nome: 'Disponível' },
+            { id: 45, nome: 'Créditos' },
+            { id: 51, nome: 'Estoques' },
+            { id: 52, nome: 'TOTAL DO ATIVO CIRCULANTE' }
+        ];
+        
+        contas.forEach(conta => {
+            const valor = valores[conta.id] || 0;
+            const percentual = conta.id === 52 ? '100.00%' : formatarPercentual(valor, ativoCirculante);
+            const isTotal = conta.id === 52;
+            
+            // --- LÓGICA DE COR CORRIGIDA ---
+            let estiloCor = '';
+            if (valor < 0) {
+                estiloCor = 'style="color: #ff6b6b !important;"';
+            } else if (isTotal) {
+                estiloCor = 'style="color: var(--color-green-primary);"';
+            }
+            
+            const classe = isTotal ? 'fw-bold' : '';
+            
+            html += `
+                <tr ${isTotal ? 'style="background-color: rgba(150, 202, 0, 0.1);"' : ''}>
+                    <td class="${classe}" ${estiloCor}>${conta.nome}</td>
+                    <td class="text-end ${classe}" ${estiloCor}>${formatarMoeda(valor)}</td>
+                    <td class="text-end ${classe}" ${estiloCor}>${percentual}</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        document.getElementById('secaoAtivo').innerHTML = html;
+    }
 
 function renderizarSecaoCapital(valores) {
     let html = '<table class="table table-dark">';
@@ -344,54 +437,26 @@ function renderizarSecaoIndices(valores, nfeResumo) {
     document.getElementById('secaoIndices').innerHTML = html;
 }
 
-async function importarNFe() {
-    const fileInput = document.getElementById('fileNFe');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('Selecione um arquivo Excel!');
-        return;
-    }
-    
-    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-        alert('Arquivo deve ser .xlsx ou .xls');
-        return;
-    }
-    
-    document.getElementById('progressoNFe').style.display = 'block';
-    
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const response = await fetch('/api/upload-nfe', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        document.getElementById('progressoNFe').style.display = 'none';
-        
-        if (result.success) {
-            alert('✅ ' + result.message);
-            fileInput.value = '';
+
+
+// Auto-carregar último mês disponível
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const response = await fetch('/api/dashboard/ultimos-meses');
+            const data = await response.json();
             
-            // Recarregar se houver mês selecionado
-            const mes = document.getElementById('mes').value;
-            const ano = document.getElementById('ano').value;
-            if (mes && ano) {
-                carregarEbitda();
+            if (data.length > 0) {
+                const ultimo = data[0];
+                document.getElementById('mes').value = ultimo.mes;
+                document.getElementById('ano').value = ultimo.ano;
+                
+                // Chama a função específica desta tela
+                await carregarEbitda();
             }
-        } else {
-            alert('❌ Erro: ' + result.message);
+        } catch (error) {
+            console.error('Erro ao carregar dados iniciais:', error);
         }
-        
-    } catch (error) {
-        document.getElementById('progressoNFe').style.display = 'none';
-        console.error('Erro:', error);
-        alert('❌ Erro ao importar arquivo!');
-    }
-}
+    });
+
 </script>
 {% endblock %}

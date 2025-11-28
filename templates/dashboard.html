@@ -38,9 +38,7 @@
                             <label for="ano" class="form-label">Ano</label>
                             <select class="form-select" id="ano">
                                 <option value="">Selecione...</option>
-                                <option value="2024">2024</option>
-                                <option value="2025">2025</option>
-                            </select>
+                                </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">&nbsp;</label>
@@ -56,28 +54,47 @@
 
     <!-- KPIs Principais -->
     <div class="row mb-4" id="kpisPrincipais" style="display: none;">
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card kpi-card">
-                <div class="kpi-label">Receita Operacional</div>
-                <div class="kpi-value" id="kpiReceita">-</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Receita Operacional</div>
+                    <div class="kpi-value" id="kpiReceita">-</div>
+                    <div class="kpi-subtext">Faturamento Bruto</div>
+                </div>
+                <i class="fas fa-hand-holding-usd kpi-icon-bg"></i>
             </div>
         </div>
-        <div class="col-md-3">
+        
+        <div class="col-md-3 mb-3">
             <div class="card kpi-card">
-                <div class="kpi-label">EBITDA</div>
-                <div class="kpi-value" id="kpiEbitda">-</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">EBITDA</div>
+                    <div class="kpi-value" id="kpiEbitda">-</div>
+                    <div class="kpi-subtext">Lucro antes de taxas</div>
+                </div>
+                <i class="fas fa-chart-line kpi-icon-bg"></i>
             </div>
         </div>
-        <div class="col-md-3">
+
+        <div class="col-md-3 mb-3">
             <div class="card kpi-card">
-                <div class="kpi-label">Resultado Operacional</div>
-                <div class="kpi-value" id="kpiResultado">-</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Resultado Operacional</div>
+                    <div class="kpi-value" id="kpiResultado">-</div>
+                    <div class="kpi-subtext">Performance Operacional</div>
+                </div>
+                <i class="fas fa-cogs kpi-icon-bg"></i>
             </div>
         </div>
-        <div class="col-md-3">
+
+        <div class="col-md-3 mb-3">
             <div class="card kpi-card">
-                <div class="kpi-label">Liquidez Corrente</div>
-                <div class="kpi-value" id="kpiLiquidez">-</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">Liquidez Corrente</div>
+                    <div class="kpi-value" id="kpiLiquidez">-</div>
+                    <div class="kpi-subtext">Capacidade de Pagamento</div>
+                </div>
+                <i class="fas fa-balance-scale kpi-icon-bg"></i>
             </div>
         </div>
     </div>
@@ -143,7 +160,90 @@
             </div>
         </div>
     </div>
+
+    <!-- Gráfico de Evolução EBITDA % -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Evolução EBITDA %</h5>
+                </div>
+                <div class="card-body" style="height: 400px;">
+                    <canvas id="graficoEbitdaHistorico"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Liquidez Corrente -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Evolução Liquidez Corrente</h5>
+                </div>
+                <div class="card-body" style="height: 400px;">
+                    <canvas id="graficoLiquidezHistorico"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- Gráfico de Liquidez Seca -->
+<div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Evolução Liquidez Seca</h5>
+                </div>
+                <div class="card-body" style="height: 400px;">
+                    <canvas id="graficoLiquidezSecaHistorico"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Gráfico de Resultado Operacional -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Evolução Resultado Operacional</h5>
+            </div>
+            <div class="card-body" style="height: 400px;">
+                <canvas id="graficoResultadoOperacionalHistorico"></canvas>
+            </div>
+        </div>
+     </div>
 </div>
+
+<!-- Gráfico de Ativo Circulante -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-wallet me-2"></i>Evolução Ativo Circulante</h5>
+            </div>
+            <div class="card-body" style="height: 400px;">
+                <canvas id="graficoAtivoCirculanteHistorico"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráfico de Capital Circulante -->
+<div class="row mb-4">
+       <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-coins me-2"></i>Evolução Capital Circulante</h5>
+            </div>
+            <div class="card-body" style="height: 400px;">
+                <canvas id="graficoCapitalCirculanteHistorico"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_css %}
@@ -177,9 +277,26 @@
 
 {% block extra_js %}
 <script>
+// Variáveis globais
 let mesSelecionado = null;
 let anoSelecionado = null;
 let graficos = {};
+let graficoEbitdaHistorico = null;
+let graficoLiquidezHistorico = null;
+let graficoLiquidezSecaHistorico = null;
+let graficoResultadoOperacionalHistorico = null;
+let graficoAtivoCirculanteHistorico = null;
+let graficoCapitalCirculanteHistorico = null
+
+// Função auxiliar para aplicar valor e cor
+    function atualizarElemento(id, valor) {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            elemento.textContent = formatarMoeda(valor);
+            // Se negativo, vermelho. Se não, remove a cor inline (usa o CSS padrão)
+            elemento.style.color = valor < 0 ? '#ff6b6b' : ''; 
+        }
+    }
 
 function formatarMoeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
@@ -212,23 +329,46 @@ async function carregarDashboard() {
         // Carregar gráficos de composição
         await carregarGraficosComposicao(mes, ano);
 
+        // Carregar gráficos históricos
+        await carregarGraficoEbitdaHistorico();
+        await carregarGraficoLiquidezHistorico();
+        await carregarGraficoLiquidezSecaHistorico();
+        await carregarGraficoResultadoOperacionalHistorico();
+        await carregarGraficoAtivoCirculanteHistorico();
+        await carregarGraficoCapitalCirculanteHistorico();
     } catch (error) {
         console.error('Erro:', error);
-        alert('Erro ao carregar dashboard!');
+        alert('Erro ao carregar dados!');
     }
 }
 
 async function carregarKPIs(mes, ano) {
-    const response = await fetch(`/api/dashboard/kpis/${mes}/${ano}`);
-    const kpis = await response.json();
+        const response = await fetch(`/api/dashboard/kpis/${mes}/${ano}`);
+        const kpis = await response.json();
 
-    document.getElementById('kpiReceita').textContent = formatarMoeda(kpis.receita);
-    document.getElementById('kpiEbitda').textContent = formatarMoeda(kpis.ebitda);
-    document.getElementById('kpiResultado').textContent = formatarMoeda(kpis.resultado_operacional);
-    document.getElementById('kpiLiquidez').textContent = kpis.liquidez_corrente.toFixed(2);
+        // Função auxiliar interna para aplicar valor e cor
+        const atualizarKPI = (elementId, valor) => {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.textContent = formatarMoeda(valor);
+                // Se menor que zero, vermelho. Se não, cor padrão (remove o inline style)
+                el.style.color = valor < 0 ? '#ff6b6b' : ''; 
+            }
+        };
 
-    document.getElementById('kpisPrincipais').style.display = 'flex';
-}
+        atualizarKPI('kpiReceita', kpis.receita);
+        atualizarKPI('kpiEbitda', kpis.ebitda);
+        atualizarKPI('kpiResultado', kpis.resultado_operacional);
+        
+        // Para Liquidez (que não é moeda, é índice)
+        const liq = document.getElementById('kpiLiquidez');
+        if (liq) {
+            liq.textContent = kpis.liquidez_corrente.toFixed(2);
+            liq.style.color = kpis.liquidez_corrente < 0 ? '#ff6b6b' : '';
+        }
+
+        document.getElementById('kpisPrincipais').style.display = 'flex';
+    }
 
 async function carregarGraficosEvolucao(ano) {
     const response = await fetch(`/api/dashboard/evolucao/${ano}`);
@@ -239,7 +379,7 @@ async function carregarGraficosEvolucao(ano) {
     if (graficos.evolucaoResultado) graficos.evolucaoResultado.destroy();
     if (graficos.fluxoCaixa) graficos.fluxoCaixa.destroy();
 
-    // Gráfico de Receita e EBITDA
+    // --- Gráfico 1: Receita (Ciano) e EBITDA (Verde) ---
     const ctxReceita = document.getElementById('graficoEvolucaoReceita').getContext('2d');
     graficos.evolucaoReceita = new Chart(ctxReceita, {
         type: 'line',
@@ -249,16 +389,22 @@ async function carregarGraficosEvolucao(ano) {
                 {
                     label: 'Receita',
                     data: dados.receita,
-                    borderColor: '#96CA00',
-                    backgroundColor: 'rgba(150, 202, 0, 0.1)',
+                    borderColor: '#00E5FF', // Ciano (Destaque Principal)
+                    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#00E5FF',
+                    pointRadius: 4,
                     tension: 0.4,
                     fill: true
                 },
                 {
                     label: 'EBITDA',
                     data: dados.ebitda,
-                    borderColor: '#C5DF56',
-                    backgroundColor: 'rgba(197, 223, 86, 0.1)',
+                    borderColor: '#96CA00', // Verde (Dinheiro/Lucro)
+                    backgroundColor: 'rgba(150, 202, 0, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#96CA00',
+                    pointRadius: 4,
                     tension: 0.4,
                     fill: true
                 }
@@ -267,31 +413,27 @@ async function carregarGraficosEvolucao(ano) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: {
-                    labels: { color: '#e0e0e0' }
+                legend: { labels: { color: '#e0e0e0', usePointStyle: true } },
+                tooltip: {
+                    backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                    callbacks: { label: c => ' ' + c.dataset.label + ': R$ ' + (c.raw/1000).toFixed(0) + 'k' }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        color: '#9e9e9e',
-                        callback: function(value) {
-                            return 'R$ ' + (value / 1000).toFixed(0) + 'k';
-                        }
-                    },
-                    grid: { color: '#2a2a2a' }
+                    grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5,5] },
+                    ticks: { color: '#9e9e9e', callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }
                 },
-                x: {
-                    ticks: { color: '#9e9e9e' },
-                    grid: { color: '#2a2a2a' }
-                }
+                x: { grid: { display: false }, ticks: { color: '#9e9e9e' } }
             }
         }
     });
 
-    // Gráfico de Resultado e Margem
+    // --- Gráfico 2: Resultado (Roxo) e Margem (Laranja) ---
     const ctxResultado = document.getElementById('graficoEvolucaoResultado').getContext('2d');
     graficos.evolucaoResultado = new Chart(ctxResultado, {
         type: 'line',
@@ -301,16 +443,20 @@ async function carregarGraficosEvolucao(ano) {
                 {
                     label: 'Resultado Operacional',
                     data: dados.resultado_operacional,
-                    borderColor: '#96CA00',
-                    backgroundColor: 'rgba(150, 202, 0, 0.1)',
+                    borderColor: '#BD37FF', // Roxo Neon
+                    backgroundColor: 'rgba(189, 55, 255, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#BD37FF',
                     tension: 0.4,
                     fill: true
                 },
                 {
                     label: 'Margem de Contribuição',
                     data: dados.margem_contribuicao,
-                    borderColor: '#84A802',
-                    backgroundColor: 'rgba(132, 168, 2, 0.1)',
+                    borderColor: '#FF9F43', // Laranja Neon
+                    backgroundColor: 'rgba(255, 159, 67, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#FF9F43',
                     tension: 0.4,
                     fill: true
                 }
@@ -319,81 +465,96 @@ async function carregarGraficosEvolucao(ano) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: {
-                    labels: { color: '#e0e0e0' }
+                legend: { labels: { color: '#e0e0e0', usePointStyle: true } },
+                tooltip: {
+                    backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1
                 }
             },
             scales: {
                 y: {
-                    beginAtZero: false,
-                    ticks: {
-                        color: '#9e9e9e',
-                        callback: function(value) {
-                            return 'R$ ' + (value / 1000).toFixed(0) + 'k';
-                        }
-                    },
-                    grid: { color: '#2a2a2a' }
+                    grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5,5] },
+                    ticks: { color: '#9e9e9e', callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }
                 },
-                x: {
-                    ticks: { color: '#9e9e9e' },
-                    grid: { color: '#2a2a2a' }
-                }
+                x: { grid: { display: false }, ticks: { color: '#9e9e9e' } }
             }
         }
     });
 
-    // Gráfico de Fluxo de Caixa Livre
+    // --- Gráfico 3: Fluxo de Caixa (Automático Verde/Vermelho) ---
     const ctxFluxo = document.getElementById('graficoFluxoCaixa').getContext('2d');
     graficos.fluxoCaixa = new Chart(ctxFluxo, {
         type: 'bar',
         data: {
             labels: dados.meses,
             datasets: [{
-                label: 'Fluxo de Caixa Livre (Acumulado)',
+                label: 'Fluxo de Caixa Livre',
                 data: dados.fluxo_caixa_livre,
-                backgroundColor: dados.fluxo_caixa_livre.map(v => v >= 0 ? '#96CA00' : '#ff4444'),
-                borderColor: dados.fluxo_caixa_livre.map(v => v >= 0 ? '#84A802' : '#cc0000'),
-                borderWidth: 1
+                backgroundColor: dados.fluxo_caixa_livre.map(v => 
+                    v >= 0 ? 'rgba(150, 202, 0, 0.2)' : 'rgba(255, 68, 68, 0.2)'),
+                borderColor: dados.fluxo_caixa_livre.map(v => 
+                    v >= 0 ? '#96CA00' : '#FF4444'),
+                borderWidth: 2,
+                borderRadius: 4
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    labels: { color: '#e0e0e0' }
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            return ' R$ ' + context.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        color: '#9e9e9e',
-                        callback: function(value) {
-                            return 'R$ ' + (value / 1000).toFixed(0) + 'k';
-                        }
-                    },
-                    grid: { color: '#2a2a2a' }
+                    grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5,5] },
+                    ticks: { color: '#9e9e9e', callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }
                 },
-                x: {
-                    ticks: { color: '#9e9e9e' },
-                    grid: { color: '#2a2a2a' }
-                }
+                x: { grid: { display: false }, ticks: { color: '#9e9e9e' } }
             }
         }
     });
 }
-
 async function carregarGraficosComposicao(mes, ano) {
     const response = await fetch(`/api/dashboard/composicao/${mes}/${ano}`);
     const dados = await response.json();
 
-    // Destruir gráficos anteriores
     if (graficos.composicaoAtivo) graficos.composicaoAtivo.destroy();
     if (graficos.composicaoPassivo) graficos.composicaoPassivo.destroy();
 
-    // Gráfico de Composição do Ativo
+    // Paleta Neon para as fatias
+    const coresAtivo = ['#96CA00', '#00E5FF', '#BD37FF', '#FF9F43']; // Verde, Ciano, Roxo, Laranja
+    const coresPassivo = ['#FF4444', '#FF9F43', '#96CA00', '#BD37FF']; // Vermelho, Laranja, Verde, Roxo
+
+    // Configuração comum para reduzir repetição
+    const doughnutOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'right', labels: { color: '#e0e0e0', padding: 15, usePointStyle: true } },
+            tooltip: {
+                backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: 1,
+                callbacks: { label: c => ' ' + c.label + ': ' + formatarMoeda(c.parsed) }
+            }
+        },
+        cutout: '60%', // Rosca mais fina e elegante
+        borderWidth: 0 // Sem borda entre as fatias para look flat neon
+    };
+
+    // Ativo
     const ctxAtivo = document.getElementById('graficoComposicaoAtivo').getContext('2d');
     graficos.composicaoAtivo = new Chart(ctxAtivo, {
         type: 'doughnut',
@@ -401,31 +562,14 @@ async function carregarGraficosComposicao(mes, ano) {
             labels: dados.ativo.labels,
             datasets: [{
                 data: dados.ativo.valores,
-                backgroundColor: ['#96CA00', '#C5DF56', '#84A802'],
-                borderColor: '#151515',
-                borderWidth: 2
+                backgroundColor: coresAtivo,
+                hoverOffset: 10
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#e0e0e0', padding: 15 }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.label + ': ' + formatarMoeda(context.parsed);
-                        }
-                    }
-                }
-            }
-        }
+        options: doughnutOptions
     });
 
-    // Gráfico de Composição do Passivo
+    // Passivo
     const ctxPassivo = document.getElementById('graficoComposicaoPassivo').getContext('2d');
     graficos.composicaoPassivo = new Chart(ctxPassivo, {
         type: 'doughnut',
@@ -433,45 +577,314 @@ async function carregarGraficosComposicao(mes, ano) {
             labels: dados.passivo.labels,
             datasets: [{
                 data: dados.passivo.valores,
-                backgroundColor: ['#ff6b6b', '#ffa500', '#96CA00'],
-                borderColor: '#151515',
-                borderWidth: 2
+                backgroundColor: coresPassivo,
+                hoverOffset: 10
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#e0e0e0', padding: 15 }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.label + ': ' + formatarMoeda(context.parsed);
-                        }
-                    }
-                }
-            }
-        }
+        options: doughnutOptions
     });
 }
 
-// Carregar dashboard automaticamente com o mês mais recente
-window.addEventListener('load', async function() {
-    try {
-        const response = await fetch('/api/dashboard/ultimos-meses');
-        const meses = await response.json();
+// --- FUNÇÃO AUXILIAR PARA GERAR CORES DINÂMICAS ---
+function gerarDatasetDinamico(apiData) {
+    // 1. Extrair todas as chaves que começam com "dados_" (ex: dados_2023, dados_2024)
+    const chavesAnos = Object.keys(apiData).filter(k => k.startsWith('dados_'));
+    
+    // 2. Extrair os anos numéricos e ordenar (do menor para o maior)
+    const anosOrdenados = chavesAnos.map(k => parseInt(k.split('_')[1])).sort((a, b) => a - b);
+    
+    // 3. Definir Paleta de Cores baseada na posição (Do passado para o futuro)
+    // O último ano (Atual) recebe Ciano. O penúltimo (Anterior) recebe Verde. Os outros recebem tons de Roxo.
+    const datasets = anosOrdenados.map((ano, index) => {
+        const isUltimoAno = index === anosOrdenados.length - 1;     // Ano Atual (2025...)
+        const isPenultimoAno = index === anosOrdenados.length - 2;  // Ano Anterior (2024...)
         
-        if (meses.length > 0) {
-            const mesRecente = meses[0];
-            document.getElementById('mes').value = mesRecente.mes;
-            document.getElementById('ano').value = mesRecente.ano;
-            carregarDashboard();
+        let corBorda, corFundo;
+
+        if (isUltimoAno) {
+            corBorda = '#00E5FF'; // Ciano Elétrico
+            corFundo = 'rgba(0, 229, 255, 0.2)';
+        } else if (isPenultimoAno) {
+            corBorda = '#96CA00'; // Verde Neon
+            corFundo = 'rgba(150, 202, 0, 0.2)';
+        } else {
+            // Anos mais antigos (2023, 2022...) - Roxo/Indigo
+            // Alterna levemente o tom se houver muitos anos para diferenciar
+            corBorda = index % 2 === 0 ? '#6366F1' : '#BD37FF'; 
+            corFundo = index % 2 === 0 ? 'rgba(99, 102, 241, 0.2)' : 'rgba(189, 55, 255, 0.2)';
+        }
+
+        return {
+            label: ano.toString(),
+            data: apiData[`dados_${ano}`],
+            backgroundColor: corFundo,
+            borderColor: corBorda,
+            borderWidth: 2,
+            borderRadius: 4,
+            barPercentage: 0.7
+        };
+    });
+
+    return datasets;
+}
+
+// Configuração padrão de escalas (Neon)
+const escalasComunsNeon = {
+    x: { grid: { display: false }, ticks: { color: '#9e9e9e', font: { size: 11 } } },
+    y: {
+        beginAtZero: true,
+        border: { display: false },
+        grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5, 5] },
+        ticks: { color: '#9e9e9e' } // Callback de formatação adicionado individualmente
+    }
+};
+
+// --- FUNÇÕES DE CARREGAMENTO INTELIGENTES ---
+
+// 1. EBITDA Histórico
+async function carregarGraficoEbitdaHistorico() {
+    try {
+        const response = await fetch('/api/dashboard/ebitda-historico');
+        const data = await response.json();
+        
+        if (graficoEbitdaHistorico) graficoEbitdaHistorico.destroy();
+        
+        const ctx = document.getElementById('graficoEbitdaHistorico').getContext('2d');
+        const datasets = gerarDatasetDinamico(data); // <--- Mágica acontece aqui
+
+        graficoEbitdaHistorico = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: data.meses, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0', usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                        callbacks: { label: c => ' ' + c.dataset.label + ': ' + c.parsed.y.toFixed(2) + '%' }
+                    }
+                },
+                scales: {
+                    ...escalasComunsNeon,
+                    y: { ...escalasComunsNeon.y, ticks: { ...escalasComunsNeon.y.ticks, callback: v => v.toFixed(1) + '%' } }
+                }
+            }
+        });
+    } catch (error) { console.error('Erro EBITDA:', error); }
+}
+
+// 2. Liquidez Corrente Histórico
+async function carregarGraficoLiquidezHistorico() {
+    try {
+        const response = await fetch('/api/dashboard/liquidez-historico');
+        const data = await response.json();
+        
+        if (graficoLiquidezHistorico) graficoLiquidezHistorico.destroy();
+        
+        const ctx = document.getElementById('graficoLiquidezHistorico').getContext('2d');
+        const datasets = gerarDatasetDinamico(data);
+
+        graficoLiquidezHistorico = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: data.meses, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0', usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                        callbacks: { label: c => ' ' + c.dataset.label + ': ' + c.parsed.y.toFixed(2) }
+                    }
+                },
+                scales: {
+                    ...escalasComunsNeon,
+                    y: { ...escalasComunsNeon.y, ticks: { ...escalasComunsNeon.y.ticks, callback: v => v.toFixed(2) } }
+                }
+            }
+        });
+    } catch (error) { console.error('Erro Liquidez:', error); }
+}
+
+// 3. Liquidez Seca Histórico
+async function carregarGraficoLiquidezSecaHistorico() {
+    try {
+        const response = await fetch('/api/dashboard/liquidez-seca-historico');
+        const data = await response.json();
+        
+        if (graficoLiquidezSecaHistorico) graficoLiquidezSecaHistorico.destroy();
+        
+        const ctx = document.getElementById('graficoLiquidezSecaHistorico').getContext('2d');
+        const datasets = gerarDatasetDinamico(data);
+
+        graficoLiquidezSecaHistorico = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: data.meses, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0', usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                        callbacks: { label: c => ' ' + c.dataset.label + ': ' + c.parsed.y.toFixed(2) }
+                    }
+                },
+                scales: {
+                    ...escalasComunsNeon,
+                    y: { ...escalasComunsNeon.y, ticks: { ...escalasComunsNeon.y.ticks, callback: v => v.toFixed(2) } }
+                }
+            }
+        });
+    } catch (error) { console.error('Erro Liquidez Seca:', error); }
+}
+
+// 4. Resultado Operacional Histórico
+async function carregarGraficoResultadoOperacionalHistorico() {
+    try {
+        const response = await fetch('/api/dashboard/resultado-operacional-historico');
+        const data = await response.json();
+        
+        if (graficoResultadoOperacionalHistorico) graficoResultadoOperacionalHistorico.destroy();
+        
+        const ctx = document.getElementById('graficoResultadoOperacionalHistorico').getContext('2d');
+        const datasets = gerarDatasetDinamico(data);
+
+        graficoResultadoOperacionalHistorico = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: data.meses, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0', usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                        callbacks: { label: c => ' ' + c.dataset.label + ': R$ ' + c.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}) }
+                    }
+                },
+                scales: {
+                    ...escalasComunsNeon,
+                    y: { ...escalasComunsNeon.y, ticks: { ...escalasComunsNeon.y.ticks, callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' } }
+                }
+            }
+        });
+    } catch (error) { console.error('Erro Resultado Op:', error); }
+}
+
+// 5. Ativo Circulante Histórico
+async function carregarGraficoAtivoCirculanteHistorico() {
+    try {
+        const response = await fetch('/api/dashboard/ativo-circulante-historico');
+        const data = await response.json();
+        
+        if (graficoAtivoCirculanteHistorico) graficoAtivoCirculanteHistorico.destroy();
+        
+        const ctx = document.getElementById('graficoAtivoCirculanteHistorico').getContext('2d');
+        const datasets = gerarDatasetDinamico(data);
+
+        graficoAtivoCirculanteHistorico = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: data.meses, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0', usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                        callbacks: { label: c => ' ' + c.dataset.label + ': R$ ' + c.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}) }
+                    }
+                },
+                scales: {
+                    ...escalasComunsNeon,
+                    y: { ...escalasComunsNeon.y, ticks: { ...escalasComunsNeon.y.ticks, callback: v => 'R$ ' + (v/1000000).toFixed(1) + 'M' } }
+                }
+            }
+        });
+    } catch (error) { console.error('Erro Ativo Circ:', error); }
+}
+
+// 6. Capital Circulante Histórico
+async function carregarGraficoCapitalCirculanteHistorico() {
+    try {
+        const response = await fetch('/api/dashboard/capital-circulante-historico');
+        const data = await response.json();
+        
+        if (graficoCapitalCirculanteHistorico) graficoCapitalCirculanteHistorico.destroy();
+        
+        const ctx = document.getElementById('graficoCapitalCirculanteHistorico').getContext('2d');
+        const datasets = gerarDatasetDinamico(data);
+
+        graficoCapitalCirculanteHistorico = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: data.meses, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0', usePointStyle: true } },
+                    tooltip: {
+                        backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                        callbacks: { label: c => ' ' + c.dataset.label + ': R$ ' + c.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}) }
+                    }
+                },
+                scales: {
+                    ...escalasComunsNeon,
+                    y: { ...escalasComunsNeon.y, ticks: { ...escalasComunsNeon.y.ticks, callback: v => 'R$ ' + (v/1000000).toFixed(1) + 'M' } }
+                }
+            }
+        });
+    } catch (error) { console.error('Erro Capital Circ:', error); }
+}
+
+// Auto-carregar dashboard e anos ao entrar na página
+window.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // 1. Carregar lista de anos disponíveis
+        const resAnos = await fetch('/api/anos-disponiveis');
+        const anos = await resAnos.json();
+        
+        const selectAno = document.getElementById('ano');
+        
+        // Limpar e preencher o select
+        selectAno.innerHTML = '<option value="">Selecione...</option>';
+        
+        anos.forEach(ano => {
+            const option = document.createElement('option');
+            option.value = ano;
+            option.textContent = ano;
+            selectAno.appendChild(option);
+        });
+
+        // 2. Carregar últimos meses para definir o padrão
+        const response = await fetch('/api/dashboard/ultimos-meses');
+        const data = await response.json();
+        
+        if (data.length > 0) {
+            const ultimo = data[0];
+            
+            // Define o mês
+            document.getElementById('mes').value = ultimo.mes;
+            
+            // Define o ano (verifica se existe na lista, senão adiciona)
+            if ([...selectAno.options].some(o => o.value == ultimo.ano)) {
+                selectAno.value = ultimo.ano;
+            } else {
+                // Caso o ano retornado não esteja na lista (ex: ano novo recém criado)
+                const option = document.createElement('option');
+                option.value = ultimo.ano;
+                option.textContent = ultimo.ano;
+                option.selected = true;
+                selectAno.appendChild(option);
+            }
+            
+            // Carrega os dados
+            await carregarDashboard();
         }
     } catch (error) {
-        console.log('Aguardando seleção manual de período');
+        console.error('Erro ao carregar dados iniciais:', error);
     }
 });
 </script>

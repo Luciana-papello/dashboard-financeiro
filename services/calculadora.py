@@ -13,6 +13,14 @@ class Calculadora:
         
     def calcular_todas_contas(self):
         """Calcula todas as contas com fórmulas para o mês/ano"""
+        
+        # --- TRAVA DE SEGURANÇA ---
+        # Impede recálculo de anos anteriores a 2025 para proteger dados históricos
+        if self.ano < 2025:
+            print(f"🔒 Ano {self.ano} é histórico/fixo. Cálculos automáticos ignorados.")
+            return 0
+        # --------------------------
+
         print(f"\n🔢 Iniciando cálculos para {self.mes}/{self.ano}...")
         
         # Buscar todas as contas que têm fórmulas (entrada_manual = False)
@@ -22,14 +30,34 @@ class Calculadora:
         self._carregar_valores_cache()
         
         # Calcular cada conta
+        
         total_calculadas = 0
         for conta in contas_calculadas:
             try:
-                # Tratar fórmulas especiais
-                if conta.formula == "ACUMULADO":
-                    resultado = self._calcular_acumulado(conta.id)
-                else:
-                    resultado = self._calcular_formula(conta.formula)
+                resultado = None
+
+                # --- NOVO: Valores Fixos para Jan-Abr/2025 (IDs 27 e 28) ---
+                if self.ano == 2025:
+                    if conta.id == 27: # FLUXO DE CAIXA
+                        if self.mes == 1: resultado = -808491.83
+                        elif self.mes == 2: resultado = -97556.96
+                        elif self.mes == 3: resultado = -135813.53
+                        elif self.mes == 4: resultado = -128647.21
+                    elif conta.id == 28: # FLUXO DE CAIXA LIVRE (ACUMULADO)
+                        if self.mes == 1: resultado = -418423.17
+                        elif self.mes == 2: resultado = -515980.13
+                        elif self.mes == 3: resultado = -605324.75
+                        elif self.mes == 4: resultado = -733971.96
+                # -----------------------------------------------------------
+
+                # Se não foi definido acima (resultado é None), calcula normalmente
+                if resultado is None:
+                    if conta.formula == "ACUMULADO":
+                        resultado = self._calcular_acumulado(conta.id)
+                    elif conta.formula == "ACUMULADO_ANUAL":
+                        resultado = self._calcular_acumulado_anual(conta.id)    
+                    else:
+                        resultado = self._calcular_formula(conta.formula)
                 
                 # Salvar resultado
                 self._salvar_valor(conta.id, resultado)
@@ -111,6 +139,11 @@ class Calculadora:
         # Fórmula: 28(mês anterior) + 27(mês atual)
         
         if conta_id == 28:
+            # --- NOVO: Regra de Exceção para Saldo Inicial (Jan/2025) ---
+            if self.mes == 1 and self.ano == 2025:
+                return -418423.17
+            # -----------------------------------------------------------
+
             # Buscar valor do mês anterior
             mes_anterior = self.mes - 1
             ano_anterior = self.ano
@@ -134,7 +167,31 @@ class Calculadora:
             return acumulado_anterior + fluxo_caixa_atual
         
         return 0.0
-    
+    def _calcular_acumulado_anual(self, conta_id):
+        """
+        Calcula o acumulado anual (soma de janeiro até o mês atual)
+        Usado para: ID 101 - Receita Acumulada Anual
+        Fórmula: Soma de ID 1 (Receita Operacional) de Jan até mês atual
+        """
+        
+        if conta_id == 101:  # Receita Acumulada Anual
+            acumulado = 0.0
+            
+            # Somar receita de janeiro até o mês atual
+            for mes_iter in range(1, self.mes + 1):
+                # Buscar receita operacional (ID 1) do mês
+                receita = ValorMensal.query.filter_by(
+                    conta_id=1,
+                    mes=mes_iter,
+                    ano=self.ano
+                ).first()
+                
+                if receita:
+                    acumulado += receita.valor
+            
+            return acumulado
+        
+        return 0.0
     def _salvar_valor(self, conta_id, valor):
         """Salva o valor calculado no banco de dados"""
         # Verificar se já existe

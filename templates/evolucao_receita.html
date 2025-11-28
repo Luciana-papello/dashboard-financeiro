@@ -1,0 +1,721 @@
+{% extends "base.html" %}
+
+{% block title %}Evolução da Receita - Dashboard Financeiro{% endblock %}
+
+{% block page_title %}Evolução da Receita{% endblock %}
+
+{% block content %}
+<div class="container-fluid animate-fade-in">
+    
+    <!-- KPIs Principais -->
+    <div class="row mb-4" id="kpisEvolucaoReceita" style="display: none;">
+        <div class="col-md-3 mb-3">
+            <div class="card kpi-card">
+                <div class="kpi-content">
+                    <div class="kpi-label">Receita 2025 YTD</div>
+                    <div class="kpi-value" id="receita2025YTD">-</div>
+                    <div class="kpi-subtext" id="periodo2025">Carregando...</div>
+                </div>
+                <i class="fas fa-chart-bar kpi-icon-bg"></i>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card kpi-card">
+                <div class="kpi-content">
+                    <div class="kpi-label">Crescimento vs 2024</div>
+                    <div class="kpi-value" id="crescimento2025">-</div>
+                    <div class="kpi-subtext">Mesmo período anterior</div>
+                </div>
+                <i class="fas fa-arrow-trend-up kpi-icon-bg"></i>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card kpi-card">
+                <div class="kpi-content">
+                    <div class="kpi-label">Disponível Atual</div>
+                    <div class="kpi-value" id="disponivelAtual">-</div>
+                    <div class="kpi-subtext" id="mesDisponivel">Carregando...</div>
+                </div>
+                <i class="fas fa-wallet kpi-icon-bg"></i>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card kpi-card">
+                <div class="kpi-content">
+                    <div class="kpi-label">Disponível vs Média 2024</div>
+                    <div class="kpi-value" id="disponivelVsMedia">-</div>
+                    <div class="kpi-subtext">Comparativo anual</div>
+                </div>
+                <i class="fas fa-balance-scale kpi-icon-bg"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráfico 1: Evolução Total Disponível -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Evolução Total Disponível (2023, 2024, 2025)
+                    </h5>
+                </div>
+                <div class="card-body" style="height: 400px;">
+                    <canvas id="graficoTotalDisponivelHistorico"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico 2: Receita Operacional Mensal -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Receita Operacional Mensal (2022, 2023, 2024, 2025)
+                    </h5>
+                </div>
+                <div class="card-body" style="height: 400px;">
+                    <canvas id="graficoReceitaMensalHistorico"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico 3: Receita Acumulada com Indicador de Crescimento -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Receita Acumulada Anual - Total por Ano (2022, 2023, 2024, 2025)
+                    </h5>
+                    <div id="indicadoresCrescimento" style="display: flex; gap: 20px;">
+                        <!-- Indicadores serão inseridos via JS -->
+                    </div>
+                </div>
+                <div class="card-body" style="height: 400px;">
+                    <canvas id="graficoReceitaAcumuladaHistorico"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<!-- Gráfico ponto de equilibrio I -->
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-crosshairs me-2"></i>Evolução Ponto de Equilíbrio I (2025)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 300px;">
+                    <canvas id="graficoPontoEquilibrio"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Gráfico ponto de equilibrio II -->
+<div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-crosshairs me-2"></i>Evolução Ponto de Equilíbrio II (2025)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px;">
+                        <canvas id="graficoPontoEquilibrioII"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variáveis globais para os gráficos
+    let graficoTotalDisponivelHistorico = null;
+    let graficoReceitaMensalHistorico = null;
+    let graficoReceitaAcumuladaHistorico = null;
+
+    // Função para formatar moeda
+    function formatarMoeda(valor) {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(valor);
+    }
+
+    // Função para carregar KPIs
+    async function carregarKPIs() {
+        try {
+            // Buscar dados de receita acumulada
+            const resReceita = await fetch('/api/evolucao-receita/receita-acumulada-historico');
+            const dataReceita = await resReceita.json();
+
+            // Buscar dados de disponível
+            const resDisponivel = await fetch('/api/evolucao-receita/total-disponivel-historico');
+            const dataDisponivel = await resDisponivel.json();
+
+            // 1. Descobrir último mês com dados em 2025 (para saber o YTD real)
+            let ultimoMesIndex = 0; 
+            for (let i = 11; i >= 0; i--) {
+                if (dataReceita.dados_2025[i] > 0) {
+                    ultimoMesIndex = i;
+                    break;
+                }
+            }
+            // Nome do mês final (ex: "Outubro")
+            const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            const nomeMesFinal = meses[ultimoMesIndex];
+            const nomeMesAbrev = nomeMesFinal.substring(0, 3); // Ex: "Out"
+
+            // --- KPI 1: Receita 2025 YTD ---
+            const valorReceita2025 = dataReceita.dados_2025[ultimoMesIndex];
+            document.getElementById('receita2025YTD').textContent = formatarMoeda(valorReceita2025);
+            // Texto dinâmico: "Janeiro a Novembro"
+            document.getElementById('periodo2025').textContent = `Janeiro a ${nomeMesFinal}`;
+
+            // --- KPI 2: Crescimento vs 2024 ---
+            const crescimento = dataReceita.crescimentos['2025'] || 0;
+            const icone = crescimento >= 0 ? '<i class="fas fa-caret-up me-1"></i>' : '<i class="fas fa-caret-down me-1"></i>';
+            const cor = crescimento >= 0 ? 'var(--color-green-primary)' : '#ff4444';
+            
+            // Atualiza valor com ícone e cor
+            const elCrescimento = document.getElementById('crescimento2025');
+            elCrescimento.innerHTML = `${icone} ${Math.abs(crescimento).toFixed(1)}%`;
+            elCrescimento.style.color = cor;
+            
+            // Atualiza subtexto para mostrar período exato (ex: "Comp. Jan-Nov")
+            // Nota: Precisamos garantir que o HTML tenha um ID para isso ou usamos querySelector
+            // Como no passo 2 usamos uma estrutura genérica, vamos injetar o texto na div kpi-subtext irmã
+            const cardCrescimento = elCrescimento.closest('.kpi-content');
+            const subtextCrescimento = cardCrescimento.querySelector('.kpi-subtext');
+            if(subtextCrescimento) subtextCrescimento.textContent = `Comp. Jan-${nomeMesAbrev} (vs 2024)`;
+
+            // --- KPI 3: Disponível Atual ---
+            // Pega o valor do último mês disponível (pode ser diferente da receita se não houver lançamento)
+            let indexDisp = 0;
+            for (let i = 11; i >= 0; i--) {
+                if (dataDisponivel.dados_2025[i] > 0) {
+                    indexDisp = i;
+                    break;
+                }
+            }
+            const valorDisponivel = dataDisponivel.dados_2025[indexDisp];
+            document.getElementById('disponivelAtual').textContent = formatarMoeda(valorDisponivel);
+            document.getElementById('mesDisponivel').textContent = `${meses[indexDisp]}/2025`;
+
+            // --- KPI 4: Disponível vs Média 2024 ---
+            // Calcula média de 2024 (somente meses > 0 para não distorcer se ano incompleto, mas 2024 é cheio)
+            const soma2024 = dataDisponivel.dados_2024.reduce((a, b) => a + b, 0);
+            const media2024 = soma2024 / 12;
+            
+            const variacaoDisp = media2024 ? ((valorDisponivel - media2024) / media2024) * 100 : 0;
+            const iconeDisp = variacaoDisp >= 0 ? '<i class="fas fa-caret-up me-1"></i>' : '<i class="fas fa-caret-down me-1"></i>';
+            const corDisp = variacaoDisp >= 0 ? 'var(--color-green-primary)' : '#ff4444';
+            
+            const elDispMedia = document.getElementById('disponivelVsMedia');
+            elDispMedia.innerHTML = `${iconeDisp} ${Math.abs(variacaoDisp).toFixed(1)}%`;
+            elDispMedia.style.color = corDisp;
+
+            // Exibir container
+            document.getElementById('kpisEvolucaoReceita').style.display = 'flex';
+
+        } catch (error) {
+            console.error('❌ Erro ao carregar KPIs:', error);
+        }
+    }
+
+
+    // --- FUNÇÃO AUXILIAR PARA GERAR CORES DINÂMICAS (Neon Style) ---
+    function gerarDatasetDinamico(apiData) {
+        // 1. Extrair chaves "dados_ANO" e ordenar
+        const chavesAnos = Object.keys(apiData).filter(k => k.startsWith('dados_'));
+        const anosOrdenados = chavesAnos.map(k => parseInt(k.split('_')[1])).sort((a, b) => a - b);
+        
+        // 2. Definir Paleta de Cores (Passado -> Futuro)
+        const datasets = anosOrdenados.map((ano, index) => {
+            const isUltimoAno = index === anosOrdenados.length - 1;     // Ano Atual (ex: 2025)
+            const isPenultimoAno = index === anosOrdenados.length - 2;  // Ano Anterior (ex: 2024)
+            
+            let corBorda, corFundo;
+
+            if (isUltimoAno) {
+                corBorda = '#00E5FF'; // Ciano (Futuro/Meta)
+                corFundo = 'rgba(0, 229, 255, 0.2)';
+            } else if (isPenultimoAno) {
+                corBorda = '#96CA00'; // Verde (Referência)
+                corFundo = 'rgba(150, 202, 0, 0.2)';
+            } else {
+                // Anos antigos: Alterna tons de roxo
+                corBorda = index % 2 === 0 ? '#6366F1' : '#BD37FF'; 
+                corFundo = index % 2 === 0 ? 'rgba(99, 102, 241, 0.2)' : 'rgba(189, 55, 255, 0.2)';
+            }
+
+            return {
+                label: ano.toString(),
+                data: apiData[`dados_${ano}`],
+                backgroundColor: corFundo,
+                borderColor: corBorda,
+                borderWidth: 2,
+                borderRadius: 4,
+                barPercentage: 0.7,
+                order: isUltimoAno ? 1 : 2 // Garante que o ano atual fique "na frente"
+            };
+        });
+
+        return datasets;
+    }
+
+    // Configuração padrão de escalas (Neon)
+    const commonScalesNeon = {
+        x: { grid: { display: false }, ticks: { color: '#cccccc' } },
+        y: {
+            beginAtZero: true,
+            border: { display: false },
+            grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5, 5] },
+            ticks: {
+                color: '#999999',
+                callback: function(value) {
+                    if (value >= 1000000) return 'R$ ' + (value / 1000000).toFixed(1) + 'M';
+                    if (value >= 1000) return 'R$ ' + (value / 1000).toFixed(0) + 'k';
+                    return 'R$ ' + value;
+                }
+            }
+        }
+    };    
+    // Gráfico 1: Total Disponível (BARRAS - 3 anos)
+    async function carregarTotalDisponivelHistorico() {
+        try {
+            const response = await fetch('/api/evolucao-receita/total-disponivel-historico');
+            const data = await response.json();
+
+            const ctx = document.getElementById('graficoTotalDisponivelHistorico').getContext('2d');
+
+            if (graficoTotalDisponivelHistorico) {
+                graficoTotalDisponivelHistorico.destroy();
+            }
+            
+            // Geração automática dos datasets
+            const datasets = gerarDatasetDinamico(data);
+
+            graficoTotalDisponivelHistorico = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.meses,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { 
+                            position: 'top', 
+                            align: 'end',
+                            labels: { color: '#e0e0e0', usePointStyle: true } 
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                            borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.dataset.label + ': ' + 
+                                        new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency', currency: 'BRL', minimumFractionDigits: 2
+                                        }).format(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: commonScalesNeon
+                }
+            });
+            console.log('✅ Gráfico Total Disponível carregado (Dinâmico)');
+        } catch (error) { console.error('❌ Erro:', error); }
+    }
+
+    // Gráfico 2: Receita Mensal (BARRAS - 4 anos)
+    async function carregarReceitaMensalHistorico() {
+        try {
+            const response = await fetch('/api/evolucao-receita/receita-mensal-historico');
+            const data = await response.json();
+
+            const ctx = document.getElementById('graficoReceitaMensalHistorico').getContext('2d');
+
+            if (graficoReceitaMensalHistorico) {
+                graficoReceitaMensalHistorico.destroy();
+            }
+            
+            // Geração automática
+            const datasets = gerarDatasetDinamico(data);
+
+            graficoReceitaMensalHistorico = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.meses,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { 
+                            position: 'top', align: 'end',
+                            labels: { color: '#e0e0e0', usePointStyle: true } 
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                            borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.dataset.label + ': ' + 
+                                        new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency', currency: 'BRL', minimumFractionDigits: 0
+                                        }).format(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: commonScalesNeon
+                }
+            });
+            console.log('✅ Gráfico Receita Mensal carregado (Dinâmico)');
+        } catch (error) { console.error('❌ Erro Receita Mensal:', error); }
+    }
+
+    // Gráfico 3: Receita Acumulada ANUAL (BARRAS - Total por ano)
+    async function carregarReceitaAcumuladaHistorico() {
+        try {
+            const response = await fetch('/api/evolucao-receita/receita-acumulada-historico');
+            const data = await response.json();
+
+            const ctx = document.getElementById('graficoReceitaAcumuladaHistorico').getContext('2d');
+
+            if (graficoReceitaAcumuladaHistorico) {
+                graficoReceitaAcumuladaHistorico.destroy();
+            }
+
+            // 1. Descobrir anos disponíveis nos dados
+            const chavesAnos = Object.keys(data).filter(k => k.startsWith('dados_'));
+            const anosOrdenados = chavesAnos.map(k => parseInt(k.split('_')[1])).sort((a, b) => a - b);
+            
+            // 2. Calcular o total de cada ano (Último mês com valor)
+            const totais = anosOrdenados.map(ano => {
+                const valoresMeses = data[`dados_${ano}`];
+                // Pega o último valor não-zero ou o valor de dezembro
+                let total = 0;
+                for (let i = 11; i >= 0; i--) {
+                    if (valoresMeses[i] > 0) {
+                        total = valoresMeses[i];
+                        break;
+                    }
+                }
+                return total;
+            });
+
+            // 3. Gerar cores dinamicamente (mesma lógica: Último=Ciano, Penúltimo=Verde)
+            const coresFundo = [];
+            const coresBorda = [];
+            
+            anosOrdenados.forEach((ano, index) => {
+                const isUltimo = index === anosOrdenados.length - 1;
+                const isPenultimo = index === anosOrdenados.length - 2;
+                
+                if (isUltimo) {
+                    coresFundo.push('rgba(0, 229, 255, 0.2)'); // Ciano
+                    coresBorda.push('#00E5FF');
+                } else if (isPenultimo) {
+                    coresFundo.push('rgba(150, 202, 0, 0.2)'); // Verde
+                    coresBorda.push('#96CA00');
+                } else {
+                    // Roxo/Indigo alternado
+                    if (index % 2 === 0) {
+                        coresFundo.push('rgba(99, 102, 241, 0.2)');
+                        coresBorda.push('#6366F1');
+                    } else {
+                        coresFundo.push('rgba(189, 55, 255, 0.2)');
+                        coresBorda.push('#BD37FF');
+                    }
+                }
+            });
+
+            graficoReceitaAcumuladaHistorico = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: anosOrdenados.map(String), // [2022, 2023, 2024, 2025...]
+                    datasets: [{
+                        label: 'Receita Total',
+                        data: totais,
+                        backgroundColor: coresFundo,
+                        borderColor: coresBorda,
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        barPercentage: 0.5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                            borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1,
+                            padding: 12, displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return new Intl.NumberFormat('pt-BR', {
+                                        style: 'currency', currency: 'BRL'
+                                    }).format(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: commonScalesNeon
+                }
+            });
+
+            // Atualizar indicadores de crescimento (Badges)
+            const indicadores = document.getElementById('indicadoresCrescimento');
+            if (indicadores) {
+                indicadores.innerHTML = '';
+                const crescimentos = data.crescimentos;
+                
+                // Filtrar apenas anos que temos no gráfico (excluindo o primeiro que não tem anterior)
+                anosOrdenados.slice(1).forEach(ano => {
+                    const perc = crescimentos[ano] || 0;
+                    const cor = perc >= 0 ? '#96CA00' : '#ff4444';
+                    const icone = perc >= 0 ? '▲' : '▼';
+                    const badge = document.createElement('div');
+                    badge.style.cssText = `
+                        background-color: rgba(30, 30, 30, 0.8);
+                        border: 1px solid ${cor};
+                        color: ${cor};
+                        padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 13px;
+                        display: flex; align-items: center; gap: 5px;
+                    `;
+                    badge.innerHTML = `<span>${ano}</span> <span>${icone} ${Math.abs(perc).toFixed(1)}%</span>`;
+                    indicadores.appendChild(badge);
+                });
+            }
+            console.log('✅ Gráfico Receita Acumulada carregado (Dinâmico)');
+        } catch (error) { console.error('❌ Erro Receita Acumulada:', error); }
+    }
+// Função para carregar o gráfico de Ponto de Equilíbrio
+    async function carregarGraficoPontoEquilibrio() {
+        try {
+            const response = await fetch('/api/evolucao-receita/ponto-equilibrio-mensal-2025');
+            const data = await response.json();
+            
+            const ctx = document.getElementById('graficoPontoEquilibrio').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                    datasets: [{
+                        label: 'Ponto de Equilíbrio (R$)',
+                        data: data.dados,
+                        // Laranja Neon
+                        backgroundColor: 'rgba(255, 159, 67, 0.2)', 
+                        borderColor: '#FF9F43', 
+                        borderWidth: 2,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }, // Só tem uma série, não precisa de legenda ocupando espaço
+                        tooltip: {
+                            backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return ' R$ ' + context.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            border: { display: false },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5, 5] },
+                            ticks: {
+                                color: '#999999',
+                                callback: function(value) {
+                                    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumSignificantDigits: 3 });
+                                }
+                            }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { color: '#cccccc' }
+                        }
+                    }
+                }
+            });
+        } catch (error) { console.error("Erro PE I:", error); }
+    }
+
+    // Ponto de Equilíbrio II - Magenta Neon
+    async function carregarGraficoPontoEquilibrioII() {
+        try {
+            const response = await fetch('/api/evolucao-receita/ponto-equilibrio-ii-mensal-2025');
+            const data = await response.json();
+            
+            const ctx = document.getElementById('graficoPontoEquilibrioII').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                    datasets: [{
+                        label: 'Ponto de Equilíbrio II (R$)',
+                        data: data.dados,
+                        // Magenta Neon
+                        backgroundColor: 'rgba(255, 107, 107, 0.2)', 
+                        borderColor: '#FF6B6B', 
+                        borderWidth: 2,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return ' R$ ' + context.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            border: { display: false },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5, 5] },
+                            ticks: {
+                                color: '#999999',
+                                callback: function(value) {
+                                    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumSignificantDigits: 3 });
+                                }
+                            }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { color: '#cccccc' }
+                        }
+                    }
+                }
+            });
+        } catch (error) { console.error("Erro PE II:", error); }
+    }
+
+// Função para carregar o gráfico de Ponto de Equilíbrio II
+    async function carregarGraficoPontoEquilibrioII() {
+        try {
+            const response = await fetch('/api/evolucao-receita/ponto-equilibrio-ii-mensal-2025');
+            const data = await response.json();
+            
+            const ctx = document.getElementById('graficoPontoEquilibrioII').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                    datasets: [{
+                        label: 'Ponto de Equilíbrio II (R$)',
+                        data: data.dados,
+                        backgroundColor: 'rgba(255, 107, 107, 0.2)', // Magenta Neon
+                        borderColor: '#FF6B6B',
+                        borderWidth: 2,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return ' R$ ' + context.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            border: { display: false },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5, 5] },
+                            ticks: {
+                                color: '#999999',
+                                callback: function(value) {
+                                    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumSignificantDigits: 3 });
+                                }
+                            }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { color: '#cccccc' }
+                        }
+                    }
+                }
+            });
+        } catch (error) { console.error("Erro PE II:", error); }
+    }
+    // Carregar todos os gráficos quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('📊 Carregando página Evolução da Receita...');
+        carregarKPIs();
+        carregarTotalDisponivelHistorico();
+        carregarReceitaMensalHistorico();
+        carregarReceitaAcumuladaHistorico();
+        carregarGraficoPontoEquilibrio();
+        carregarGraficoPontoEquilibrioII();
+    });
+</script>
+{% endblock %}

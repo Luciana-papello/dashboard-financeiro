@@ -37,6 +37,12 @@
                         <span>Dashboard</span>
                     </a>
                 </li>
+                <li class="sidebar-item {% if request.endpoint == 'evolucao_receita' %}active{% endif %}">
+                    <a href="{{ url_for('evolucao_receita') }}" class="sidebar-link">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Evol. Receita</span>
+                    </a>
+                </li>
                 <li class="sidebar-item {% if request.endpoint == 'entrada_dados' %}active{% endif %}">
                     <a href="{{ url_for('entrada_dados') }}" class="sidebar-link">
                         <i class="fas fa-keyboard"></i>

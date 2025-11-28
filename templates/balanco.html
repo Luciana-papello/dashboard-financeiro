@@ -56,32 +56,44 @@
 
     <!-- Indicadores de Liquidez -->
     <div class="row mb-4" id="kpisLiquidez" style="display: none;">
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card kpi-card">
-                <div class="kpi-label">Liquidez Corrente</div>
-                <div class="kpi-value" id="liquidezCorrente">-</div>
-                <small class="text-muted">Capacidade de pagamento</small>
+                <div class="kpi-content">
+                    <div class="kpi-label">Liquidez Corrente</div>
+                    <div class="kpi-value" id="liquidezCorrente">-</div>
+                    <div class="kpi-subtext">Curto Prazo</div>
+                </div>
+                <i class="fas fa-water kpi-icon-bg"></i>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card kpi-card">
-                <div class="kpi-label">Liquidez Seca</div>
-                <div class="kpi-value" id="liquidezSeca">-</div>
-                <small class="text-muted">Sem estoques</small>
+                <div class="kpi-content">
+                    <div class="kpi-label">Liquidez Seca</div>
+                    <div class="kpi-value" id="liquidezSeca">-</div>
+                    <div class="kpi-subtext">Sem Estoques</div>
+                </div>
+                <i class="fas fa-tint-slash kpi-icon-bg"></i>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card kpi-card">
-                <div class="kpi-label">Liquidez Imediata</div>
-                <div class="kpi-value" id="liquidezImediata">-</div>
-                <small class="text-muted">Disponível imediato</small>
+                <div class="kpi-content">
+                    <div class="kpi-label">Liquidez Imediata</div>
+                    <div class="kpi-value" id="liquidezImediata">-</div>
+                    <div class="kpi-subtext">Disponível Agora</div>
+                </div>
+                <i class="fas fa-money-check-alt kpi-icon-bg"></i>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card kpi-card">
-                <div class="kpi-label">Capital Circulante</div>
-                <div class="kpi-value" id="capitalCirculante">-</div>
-                <small class="text-muted">Ativo - Passivo Circulante</small>
+                <div class="kpi-content">
+                    <div class="kpi-label">Capital Circulante</div>
+                    <div class="kpi-value" id="capitalCirculante">-</div>
+                    <div class="kpi-subtext">Ativo - Passivo (Circ.)</div>
+                </div>
+                <i class="fas fa-sync-alt kpi-icon-bg"></i>
             </div>
         </div>
     </div>
@@ -178,12 +190,20 @@
                     const valor = valores[conta.id] || 0;
                     const isTotal = conta.nome.includes('TOTAL');
                     const classe = isTotal ? 'fw-bold' : '';
-                    const cor = isTotal ? 'style="color: var(--color-green-light);"' : '';
+                    
+                    // --- CORREÇÃO: Prioridade para Vermelho se Negativo ---
+                    let estiloCor = '';
+                    if (valor < 0) {
+                        estiloCor = 'style="color: #ff6b6b !important;"';
+                    } else if (isTotal) {
+                        estiloCor = 'style="color: var(--color-green-light);"';
+                    }
+                    // ----------------------------------------------------
 
                     html += `
                         <tr>
-                            <td class="${classe}" ${cor}>${conta.nome}</td>
-                            <td class="text-end ${classe}" ${cor}>${formatarMoeda(valor)}</td>
+                            <td class="${classe}" ${estiloCor}>${conta.nome}</td>
+                            <td class="text-end ${classe}" ${estiloCor}>${formatarMoeda(valor)}</td>
                         </tr>
                     `;
                 });
@@ -204,19 +224,32 @@
             
             if (contasCategoria.length > 0) {
                 html += `<div class="mb-4">`;
-                html += `<h6 class="text-uppercase fw-bold mb-3" style="color: var(--color-green-primary);">${categoria}</h6>`;
+                html += `<h6 class="text-uppercase fw-bold mb-3" style="color: var(--color-green-primary);">${categoria === 'LIQUIDEZ' ? 'PATRIMÔNIO LÍQUIDO' : categoria}</h6>`;
                 html += `<table class="table table-dark table-sm">`;
 
                 contasCategoria.forEach(conta => {
+                    // Filtra índices que não devem aparecer na tabela
+                    if (['LIQUIDEZ CORRENTE', 'LIQUIDEZ SECA', 'LIQUIDEZ IMEDIATA', 'CAPITAL CIRCULANTE'].includes(conta.nome)) {
+                        return; 
+                    }
+
                     const valor = valores[conta.id] || 0;
                     const isTotal = conta.nome.includes('TOTAL');
                     const classe = isTotal ? 'fw-bold' : '';
-                    const cor = isTotal ? 'style="color: var(--color-green-light);"' : '';
+                    
+                    // --- CORREÇÃO: Prioridade para Vermelho se Negativo ---
+                    let estiloCor = '';
+                    if (valor < 0) {
+                        estiloCor = 'style="color: #ff6b6b !important;"';
+                    } else if (isTotal) {
+                        estiloCor = 'style="color: var(--color-green-light);"';
+                    }
+                    // ----------------------------------------------------
 
                     html += `
                         <tr>
-                            <td class="${classe}" ${cor}>${conta.nome}</td>
-                            <td class="text-end ${classe}" ${cor}>${formatarMoeda(valor)}</td>
+                            <td class="${classe}" ${estiloCor}>${conta.nome}</td>
+                            <td class="text-end ${classe}" ${estiloCor}>${formatarMoeda(valor)}</td>
                         </tr>
                     `;
                 });
@@ -231,10 +264,39 @@
     function exibirKPIs(valores) {
         document.getElementById('kpisLiquidez').style.display = 'flex';
         
-        document.getElementById('liquidezCorrente').textContent = (valores[84] || 0).toFixed(2);
-        document.getElementById('liquidezSeca').textContent = (valores[85] || 0).toFixed(2);
-        document.getElementById('liquidezImediata').textContent = (valores[86] || 0).toFixed(2);
-        document.getElementById('capitalCirculante').textContent = formatarMoeda(valores[87] || 0);
+        // Função auxiliar para atualizar com cor
+        const atualizarKPI = (id, valor, isMoeda = false) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = isMoeda ? formatarMoeda(valor) : valor.toFixed(2);
+                // Aplica vermelho se negativo
+                el.style.color = valor < 0 ? '#ff6b6b' : '';
+            }
+        };
+
+        atualizarKPI('liquidezCorrente', valores[84] || 0);
+        atualizarKPI('liquidezSeca', valores[85] || 0);
+        atualizarKPI('liquidezImediata', valores[86] || 0);
+        atualizarKPI('capitalCirculante', valores[87] || 0, true);
     }
+
+// Auto-carregar último mês disponível
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const response = await fetch('/api/dashboard/ultimos-meses');
+            const data = await response.json();
+            
+            if (data.length > 0) {
+                const ultimo = data[0];
+                document.getElementById('mes').value = ultimo.mes;
+                document.getElementById('ano').value = ultimo.ano;
+                
+                // Chama a função específica desta tela
+                await carregarBalanco();
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dados iniciais:', error);
+        }
+    });    
 </script>
 {% endblock %}

@@ -4,6 +4,14 @@ from models.conta import Conta
 from models.valor_mensal import ValorMensal
 from config import Config
 import os
+from services.omie_service import OmieService
+from datetime import datetime
+import pandas as pd
+from flask import send_file
+import io
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import desc
+
 
 # Criar aplicação Flask
 app = Flask(__name__)
@@ -24,6 +32,284 @@ def index():
 def dashboard():
     """Dashboard principal"""
     return render_template('dashboard.html')
+
+#API DE ATUALIZAÇÃO ANUAL
+@app.route('/api/anos-disponiveis')
+def api_anos_disponiveis():
+    """Retorna lista de anos que possuem dados no banco"""
+    try:
+        # Busca todos os anos distintos na tabela de valores
+        anos_query = db.session.query(ValorMensal.ano).distinct().order_by(ValorMensal.ano).all()
+        # Extrai apenas o número do ano da tupla (ano,) -> ano
+        anos = [a[0] for a in anos_query if a[0] >= 2022] # Filtra a partir de 2022
+        
+        # Se não houver dados, garante pelo menos o ano atual
+        if not anos:
+            import datetime
+            anos = [datetime.datetime.now().year]
+            
+        return jsonify(anos)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dashboard/ebitda-historico')
+def api_dashboard_ebitda_historico():
+    """Retorna dados históricos do EBITDA % (Dinâmico)"""
+    try:
+        # Busca anos disponíveis (>= 2023 para este gráfico)
+        anos_query = db.session.query(ValorMensal.ano).distinct().filter(ValorMensal.ano >= 2023).order_by(ValorMensal.ano).all()
+        anos = [a[0] for a in anos_query]
+        
+        if not anos: anos = [2023, 2024, 2025] # Fallback
+
+        resposta = {'meses': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']}
+        
+        for ano in anos:
+            dados_ano = [0] * 12
+            valores = ValorMensal.query.filter_by(conta_id=97, ano=ano).all() # ID 97 = EBITDA %
+            for v in valores:
+                if 1 <= v.mes <= 12:
+                    dados_ano[v.mes - 1] = round(v.valor, 2)
+            
+            # Cria a chave dinâmica (ex: dados_2023, dados_2026)
+            resposta[f'dados_{ano}'] = dados_ano
+            
+        return jsonify(resposta)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dashboard/liquidez-historico')
+def api_dashboard_liquidez_historico():
+    """Retorna dados históricos da Liquidez Corrente (Dinâmico)"""
+    try:
+        anos_query = db.session.query(ValorMensal.ano).distinct().filter(ValorMensal.ano >= 2023).order_by(ValorMensal.ano).all()
+        anos = [a[0] for a in anos_query]
+        if not anos: anos = [2023, 2024, 2025]
+
+        resposta = {'meses': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']}
+        
+        for ano in anos:
+            dados_ano = [0] * 12
+            valores = ValorMensal.query.filter_by(conta_id=84, ano=ano).all() # ID 84 = Liquidez Corrente
+            for v in valores:
+                if 1 <= v.mes <= 12:
+                    dados_ano[v.mes - 1] = round(v.valor, 2)
+            resposta[f'dados_{ano}'] = dados_ano
+            
+        return jsonify(resposta)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/dashboard/liquidez-seca-historico')
+def api_dashboard_liquidez_seca_historico():
+    """Retorna dados históricos da Liquidez Seca (Dinâmico)"""
+    try:
+        anos_query = db.session.query(ValorMensal.ano).distinct().filter(ValorMensal.ano >= 2023).order_by(ValorMensal.ano).all()
+        anos = [a[0] for a in anos_query]
+        if not anos: anos = [2023, 2024, 2025]
+
+        resposta = {'meses': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']}
+        
+        for ano in anos:
+            dados_ano = [0] * 12
+            valores = ValorMensal.query.filter_by(conta_id=85, ano=ano).all() # ID 85 = Liquidez Seca
+            for v in valores:
+                if 1 <= v.mes <= 12:
+                    dados_ano[v.mes - 1] = round(v.valor, 2)
+            resposta[f'dados_{ano}'] = dados_ano
+            
+        return jsonify(resposta)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+     
+@app.route('/api/dashboard/resultado-operacional-historico')
+def api_dashboard_resultado_operacional_historico():
+    """Retorna dados históricos do Resultado Operacional (Dinâmico)"""
+    try:
+        # Filtra >= 2024 conforme sua regra original
+        anos_query = db.session.query(ValorMensal.ano).distinct().filter(ValorMensal.ano >= 2024).order_by(ValorMensal.ano).all()
+        anos = [a[0] for a in anos_query]
+        if not anos: anos = [2024, 2025]
+
+        resposta = {'meses': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']}
+        
+        for ano in anos:
+            dados_ano = [0] * 12
+            valores = ValorMensal.query.filter_by(conta_id=18, ano=ano).all() # ID 18 = Resultado Operacional
+            for v in valores:
+                if 1 <= v.mes <= 12:
+                    dados_ano[v.mes - 1] = round(v.valor, 2)
+            resposta[f'dados_{ano}'] = dados_ano
+            
+        return jsonify(resposta)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/dashboard/ativo-circulante-historico')
+def api_dashboard_ativo_circulante_historico():
+    """Retorna dados históricos do Ativo Circulante (Dinâmico)"""
+    try:
+        anos_query = db.session.query(ValorMensal.ano).distinct().filter(ValorMensal.ano >= 2024).order_by(ValorMensal.ano).all()
+        anos = [a[0] for a in anos_query]
+        if not anos: anos = [2024, 2025]
+
+        resposta = {'meses': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']}
+        
+        for ano in anos:
+            dados_ano = [0] * 12
+            valores = ValorMensal.query.filter_by(conta_id=52, ano=ano).all() # ID 52 = Ativo Circulante
+            for v in valores:
+                if 1 <= v.mes <= 12:
+                    dados_ano[v.mes - 1] = round(v.valor, 2)
+            resposta[f'dados_{ano}'] = dados_ano
+            
+        return jsonify(resposta)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dashboard/capital-circulante-historico')
+def api_dashboard_capital_circulante_historico():
+    """Retorna dados históricos do Capital Circulante (Dinâmico)"""
+    try:
+        anos_query = db.session.query(ValorMensal.ano).distinct().filter(ValorMensal.ano >= 2024).order_by(ValorMensal.ano).all()
+        anos = [a[0] for a in anos_query]
+        if not anos: anos = [2024, 2025]
+
+        resposta = {'meses': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']}
+        
+        for ano in anos:
+            dados_ano = [0] * 12
+            valores = ValorMensal.query.filter_by(conta_id=87, ano=ano).all() # ID 87 = Capital Circulante
+            for v in valores:
+                if 1 <= v.mes <= 12:
+                    dados_ano[v.mes - 1] = round(v.valor, 2)
+            resposta[f'dados_{ano}'] = dados_ano
+            
+        return jsonify(resposta)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/evolucao-receita/total-disponivel-historico')
+def api_total_disponivel_historico():
+    """Retorna dados históricos do Total Disponível (ID 37) para 2023, 2024, 2025"""
+    try:
+        dados = {
+            '2023': [0] * 12,
+            '2024': [0] * 12,
+            '2025': [0] * 12
+        }
+        
+        # Buscar valores de Total Disponível (ID 37) para os 3 anos
+        for ano in [2023, 2024, 2025]:
+            valores = ValorMensal.query.filter_by(
+                conta_id=37,
+                ano=ano
+            ).order_by(ValorMensal.mes).all()
+            
+            for v in valores:
+                dados[str(ano)][v.mes - 1] = round(v.valor, 2)
+        
+        return jsonify({
+            'meses': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+            'dados_2023': dados['2023'],
+            'dados_2024': dados['2024'],
+            'dados_2025': dados['2025']
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500       
+
+@app.route('/api/evolucao-receita/receita-mensal-historico')
+def api_receita_mensal_historico():
+    """Retorna dados históricos da Receita Operacional Mensal (ID 1) para 2022, 2023, 2024, 2025"""
+    try:
+        dados = {
+            '2022': [0] * 12,
+            '2023': [0] * 12,
+            '2024': [0] * 12,
+            '2025': [0] * 12
+        }
+        
+        # Buscar valores de Receita Operacional (ID 1) para os 4 anos
+        for ano in [2022, 2023, 2024, 2025]:
+            valores = ValorMensal.query.filter_by(
+                conta_id=1,
+                ano=ano
+            ).order_by(ValorMensal.mes).all()
+            
+            for v in valores:
+                dados[str(ano)][v.mes - 1] = round(v.valor, 2)
+        
+        return jsonify({
+            'meses': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+            'dados_2022': dados['2022'],
+            'dados_2023': dados['2023'],
+            'dados_2024': dados['2024'],
+            'dados_2025': dados['2025']
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/evolucao-receita/receita-acumulada-historico')
+def api_receita_acumulada_historico():
+    """Retorna dados históricos da Receita Acumulada (ID 101) para 2022, 2023, 2024, 2025"""
+    try:
+        dados = {
+            '2022': [0] * 12,
+            '2023': [0] * 12,
+            '2024': [0] * 12,
+            '2025': [0] * 12
+        }
+        
+        # Buscar valores de Receita Acumulada (ID 101) para os 4 anos
+        for ano in [2022, 2023, 2024, 2025]:
+            valores = ValorMensal.query.filter_by(
+                conta_id=101,
+                ano=ano
+            ).order_by(ValorMensal.mes).all()
+            
+            for v in valores:
+                dados[str(ano)][v.mes - 1] = round(v.valor, 2)
+        
+        # Descobrir qual é o último mês com dados em 2025
+        ultimo_mes_2025 = 12
+        for mes in range(11, -1, -1):  # De dezembro até janeiro
+            if dados['2025'][mes] > 0:
+                ultimo_mes_2025 = mes + 1  # +1 porque array começa em 0
+                break
+        
+        # Calcular % de crescimento vs ano anterior (COMPARANDO MESMO PERÍODO)
+        crescimentos = {}
+        
+        for ano in [2023, 2024, 2025]:
+            ano_anterior = ano - 1
+            
+            # Para 2025, comparar só até o último mês disponível
+            if ano == 2025:
+                mes_comparacao = ultimo_mes_2025 - 1  # -1 porque array começa em 0
+            else:
+                mes_comparacao = 11  # Dezembro (índice 11)
+            
+            valor_atual = dados[str(ano)][mes_comparacao]
+            valor_anterior = dados[str(ano_anterior)][mes_comparacao]
+            
+            if valor_anterior > 0:
+                percentual = ((valor_atual - valor_anterior) / valor_anterior) * 100
+                crescimentos[str(ano)] = round(percentual, 2)
+            else:
+                crescimentos[str(ano)] = 0
+        
+        return jsonify({
+            'meses': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+            'dados_2022': dados['2022'],
+            'dados_2023': dados['2023'],
+            'dados_2024': dados['2024'],
+            'dados_2025': dados['2025'],
+            'crescimentos': crescimentos,
+            'ultimo_mes_2025': ultimo_mes_2025  # Informação extra para debug
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/entrada-dados')
 def entrada_dados():
@@ -49,6 +335,11 @@ def ebitda():
 def capital_giro():
     """Tela de Capital de Giro"""
     return render_template('capital_giro.html')
+
+@app.route('/evolucao-receita')
+def evolucao_receita():
+    """Tela de Evolução da Receita"""
+    return render_template('evolucao_receita.html')
 
 # Função para popular o banco com as contas
 def popular_contas():
@@ -180,7 +471,7 @@ def popular_contas():
         (24, "Pagamento de Imobilizações", None, "DRE", None, True),
         (25, "Parcelamento de Impostos", None, "DRE", None, True),
         (26, "Amortização de Emprestimos", None, "DRE", None, True),
-        (27, "FLUXO CAIXA", None, "DRE", "18+22-23-24-25-26", False),
+        (27, "FLUXO CAIXA", None, "DRE", "18+20+22-23-24-25-26", False),
         (28, "FLUXO DE CAIXA LIVRE", None, "DRE", "ACUMULADO", False),
     ]
     
@@ -202,8 +493,8 @@ def popular_contas():
         (88, "NECESSIDADE DE CAPITAL DE GIRO", "NCG", "Capital_Giro", "38+39+41+42+51+43", False),
         (89, "SUSTENTAÇÃO", "SUSTENTACAO", "Capital_Giro", "58+59+60+61+62+64+70", False),
         (90, "NECESSIDADE LÍQUIDA DE CAPITAL DE GIRO", "NCG_LIQUIDA", "Capital_Giro", "88-89", False),
-        (91, "TESOURARIA", "TESOURARIA", "Capital_Giro", "90-37", False),
-        (92, "DEFICIT A REGULARIZAR", "DEFICIT", "Capital_Giro", "61+95", False),
+        (91, "TESOURARIA", "TESOURARIA", "Capital_Giro", "37-90", False),
+        (92, "DEFICIT A REGULARIZAR", "DEFICIT", "Capital_Giro", "91+65", False),
     ]
     
     for id_conta, nome, categoria, tipo, formula, entrada_manual in contas_capital_giro:
@@ -620,7 +911,230 @@ def api_nfe_resumo(mes, ano):
             'ano': ano
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500        
+        return jsonify({'error': str(e)}), 500 
+
+    
+@app.route('/api/evolucao-receita/ponto-equilibrio-mensal-2025')
+def api_ponto_equilibrio_mensal_2025():
+    """Calcula o Ponto de Equilíbrio I mensalmente para 2025"""
+    try:
+        dados_meses = []
+        
+        # Loop de Janeiro (1) a Dezembro (12)
+        for mes in range(1, 13):
+            # Função auxiliar para buscar valor do mês específico
+            def get_val(conta_id):
+                val = db.session.query(ValorMensal.valor)\
+                    .filter_by(conta_id=conta_id, ano=2025, mes=mes).scalar()
+                return val or 0.0
+
+            receita = get_val(1)       # ID 1
+            custo_var = abs(get_val(15)) # ID 15 (Usamos abs para garantir razão positiva)
+            custo_fixo = abs(get_val(17)) # ID 17 (Usamos abs para o valor final ser positivo)
+
+            ponto_equilibrio = 0
+            
+            # Aplicação da fórmula: 17 / (1 - (15 / 1))
+            if receita > 0:
+                razao = custo_var / receita
+                # Margem não pode ser 0 ou negativa para o calculo fazer sentido
+                if razao < 1:
+                    margem = 1 - razao
+                    ponto_equilibrio = custo_fixo / margem
+            
+            dados_meses.append(ponto_equilibrio)
+
+        return jsonify({'dados': dados_meses})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500           
+
+@app.route('/api/evolucao-receita/ponto-equilibrio-ii-mensal-2025')
+def api_ponto_equilibrio_ii_mensal_2025():
+    """Calcula o Ponto de Equilíbrio II (com Fluxo de Caixa DRE) para 2025"""
+    try:
+        dados_meses = []
+        
+        for mes in range(1, 13):
+            # Função auxiliar para buscar valor
+            def get_val(conta_id):
+                val = db.session.query(ValorMensal.valor)\
+                    .filter_by(conta_id=conta_id, ano=2025, mes=mes).scalar()
+                # Usamos abs() para garantir que pegamos o valor positivo da despesa/saída
+                return abs(val) if val else 0.0
+
+            # 1. Componentes Básicos
+            receita = get_val(1)        # ID 1
+            custo_var = get_val(15)     # ID 15
+            custo_fixo = get_val(17)    # ID 17
+
+            # 2. Calcular o "Fluxo de Caixa DRE" (ID 102 Virtual)
+            # Soma dos IDs: 23, 24, 25, 26
+            fluxo_caixa_dre = get_val(23) + get_val(24) + get_val(25) + get_val(26)
+
+            ponto_equilibrio_ii = 0
+            
+            # 3. Fórmula: (17 + 102) / (1 - (15 / 1))
+            if receita > 0:
+                razao_custo = custo_var / receita
+                # A margem de contribuição (1 - razão) deve ser positiva
+                if razao_custo < 1:
+                    margem_contribuicao = 1 - razao_custo
+                    
+                    # O numerador agora é Custo Fixo + Fluxo de Caixa DRE
+                    total_a_cobrir = custo_fixo + fluxo_caixa_dre
+                    
+                    ponto_equilibrio_ii = total_a_cobrir / margem_contribuicao
+            
+            dados_meses.append(ponto_equilibrio_ii)
+
+        return jsonify({'dados': dados_meses})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+#ROTAS DE INTEGRAÇÃO OMIE
+@app.route('/api/integracao/sincronizar-omie', methods=['POST'])
+def api_sincronizar_omie():
+    """Rota para disparar a sincronização manual"""
+    try:
+        service = OmieService()
+        resultado = service.sincronizar_ultimos_60_dias()
+        
+        # Opcional: Recalcular fórmulas gerais após atualizar a conta 95
+        from services.calculadora import Calculadora
+        # Pega o mês atual como referência para recálculo rápido
+        agora = datetime.now()
+        
+        # CORREÇÃO AQUI: Usar .month em vez de .mes
+        calc = Calculadora(agora.month, agora.year)
+        calc.calcular_todas_contas()
+        
+        return jsonify(resultado)
+    except Exception as e:
+        print(f"Erro na sincronização: {e}")
+        return jsonify({'error': str(e)}), 500   
+    
+#NOVAS ROTAS DE IMPORTAÇÃO DE NF E BAIXAR MODELO
+# --- ROTA PARA BAIXAR O MODELO EXCEL ---
+@app.route('/api/nfe/download-template')
+def download_template_nfe():
+    # Cria um DataFrame vazio com as colunas certas
+    df = pd.DataFrame(columns=['Numero NF', 'Fornecedor', 'Valor', 'Data Emissao', 'Descricao', 'Empresa'])
+    
+    # Exemplo de linha para o usuário entender
+    df.loc[0] = ['12345', 'Exemplo Fornecedor', 1500.00, '01/11/2025', 'Material de Escritório', 'Empo']
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Modelo Importacao')
+    
+    output.seek(0)
+    
+    return send_file(
+        output, 
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True, 
+        download_name='modelo_importacao_nfe.xlsx'
+    )
+
+# --- ROTA PARA PROCESSAR O UPLOAD ---
+@app.route('/api/nfe/importar-manual', methods=['POST'])
+def importar_nfe_manual():
+    from services.importador_nfe_manual import ImportadorNfeManual
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'Arquivo não selecionado'}), 400
+
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        return jsonify({'error': 'Formato inválido. Use Excel (.xlsx)'}), 400
+
+    try:
+        importador = ImportadorNfeManual()
+        resultado = importador.processar_arquivo(file)
+        
+        if resultado['sucesso']:
+            return jsonify({'mensagem': f"Sucesso! {resultado['qtd']} notas processadas."})
+        else:
+            return jsonify({'error': resultado['erro']}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# --- ROTA PARA LANÇAMENTO MANUAL AVULSO (WEB) ---
+@app.route('/api/nfe/lancar-manual', methods=['POST'])
+def api_lancar_nfe_manual():
+    # Importações aqui dentro para evitar ERRO CIRCULAR
+    from models.nota_fiscal import NotaFiscal
+    from models.valor_mensal import ValorMensal
+    
+    try:
+        dados = request.json
+        
+        # Validar campos obrigatórios
+        if not dados.get('valor') or not dados.get('data_emissao'):
+            return jsonify({'error': 'Valor e Data são obrigatórios'}), 400
+
+        # Tratamento da Data
+        data_emissao = datetime.strptime(dados['data_emissao'], '%Y-%m-%d').date()
+        
+        # Tratamento do Valor
+        valor = float(dados['valor'])
+        
+        # Gerar Chave Única
+        import time
+        timestamp = int(time.time())
+        numero_nf = dados.get('numero', 'S/N')
+        chave_unica = f"MAN_WEB_{timestamp}_{numero_nf}"
+        
+        # Criar Objeto NotaFiscal
+        nova_nota = NotaFiscal(
+            chave_externa=chave_unica,
+            numero=numero_nf,
+            fornecedor=dados.get('fornecedor', 'Fornecedor Diverso'),
+            descricao=dados.get('descricao', 'Lançamento Manual'),
+            valor=valor,
+            data_emissao=data_emissao,
+            mes=data_emissao.month,
+            ano=data_emissao.year,
+            conta_id=95, # ID 95 = Compras
+            categoria="Lançamento Manual (Painel)",
+            empresa=dados.get('empresa', 'Manual')
+        )
+        
+        db.session.add(nova_nota)
+        # Commit parcial para garantir que a nota salvou antes de calcular
+        db.session.commit()
+        
+        # --- Recalcular Conta 95 ---
+        mes = data_emissao.month
+        ano = data_emissao.year
+        
+        total = db.session.query(db.func.sum(NotaFiscal.valor))\
+            .filter(NotaFiscal.conta_id == 95, NotaFiscal.mes == mes, NotaFiscal.ano == ano)\
+            .scalar() or 0.0
+            
+        registro = ValorMensal.query.filter_by(conta_id=95, mes=mes, ano=ano).first()
+        
+        if registro:
+            registro.valor = total
+        else:
+            novo_reg = ValorMensal(conta_id=95, mes=mes, ano=ano, valor=total)
+            db.session.add(novo_reg)
+            
+        db.session.commit()
+        
+        return jsonify({'mensagem': 'Lançamento realizado com sucesso!', 'total_atualizado': total})
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERRO NO SERVIDOR: {e}") # Isso vai aparecer no seu terminal
+        return jsonify({'error': str(e)}), 500    
 
 if __name__ == '__main__':
     with app.app_context():
